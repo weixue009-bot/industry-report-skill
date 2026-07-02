@@ -1,0 +1,12 @@
+{
+  "name": "industry-report",
+  "version": "1.0.0",
+  "description": "AI 驱动产业研究报告生成器。从同花顺 iwencai 拉取研报 → AI 分析提取 → 生成单文件自包含 HTML 报告。",
+  "author": "为学 & Claw",
+  "keywords": ["产业研究", "行业报告", "研报分析", "产业链", "行业分析"],
+  "requires": {
+    "skills": ["report-search"],
+    "env": ["IWENCAI_API_KEY"],
+    "python": ">=3.9"
+  }
+}
