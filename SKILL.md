@@ -1,6 +1,6 @@
 ---
 name: industry-report
-description: AI 驱动产业研究报告生成器。从同花顺 iwencai + 东方财富 reportapi 双数据源拉取研报 → AI 分析提取 → 生成单文件自包含 HTML 报告。用户只需说出行业名称，AI 自动从研报中发现产业链环节并完成全部分析。Trigger: 产业研究报告、行业研报分析、生成XX行业报告、产业分析报告、产业链研究
+description: "AI 驱动产业研究报告生成器。从同花顺 iwencai + 东方财富 reportapi 双数据源拉取研报，AI 分析后生成单文件自包含 HTML 报告。用户只需说出行业名称即可。"
 user-invocable: true
 metadata:
   emoji: "🏭"
@@ -8,6 +8,7 @@ metadata:
   requires:
     env: ["IWENCAI_API_KEY"]
   primaryEnv: "IWENCAI_API_KEY"
+  triggers: ["产业研究报告", "行业研报分析", "生成XX行业报告", "产业分析报告", "产业链研究"]
 ---
 
 # 产业研究报告 Skill
