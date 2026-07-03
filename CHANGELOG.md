@@ -1,5 +1,12 @@
   # Changelog
 
+  ## [2.0.7] - 2026-07-04
+
+  ### Fixed
+  - **`chain_flow` fallback 残留华微电子产业链数据**：`company_report.html` 第 312 行硬编码了"硅片/碳化硅衬底→中游·华微电子→新能源车/光伏"作为通用 fallback（开发测试残留）。任何缺 `chain_flow` 字段的分析 JSON 都会显示华微电子的半导体产业链内容，造成严重的跨行业数据污染。修复：fallback 改为中性占位提示"请在 analysis.json 中填写 chain_flow 字段"。
+
+  ---
+
   ## [2.0.6] - 2026-07-04
 
   ### Fixed

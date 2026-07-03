@@ -449,6 +449,11 @@ Agent 读取以上全部数据，生成 `analysis/company/{代码}/analysis.json
   },
   "one_sentence_view": "用'不是...而是...'句式点出核心定位，普通人5秒看懂",
   "chain_positioning": "公司在产业链中的位置，200-300字",
+  "chain_flow": [
+    {"title": "上游", "desc": "上游描述"},
+    {"title": "中游·公司名", "desc": "中游描述", "highlight": true},
+    {"title": "下游", "desc": "下游描述"}
+  ],
   "key_theme_relation": {
     "theme": "新能源 + 国产替代",
     "summary": "核心概念与公司的真实关系说明",
@@ -549,6 +554,7 @@ python "C:\Users\001\.workbuddy\skills\industry-report\scripts\build_report.py" 
 8. **文件隔离**：行业数据在 `raw/industry/`、`analysis/industry/`、`output/industry/`；公司数据在 `raw/company/`、`analysis/company/`、`output/company/`
 9. **数据完整性**：财务/行情数据基于东方财富免费接口，可能偶发不可用，此时标注"N/A"继续执行
 10. **证据等级必须标注**：A（一手）/ B（研报）/ C（线索）
+11. **`chain_flow` 必须填写**：公司分析 JSON 中 `chain_flow` 必须显式定义上游/中游(highlight=true)/下游三级结构，模板不再依赖通用 fallback，缺失时产业链卡片显示占位提示
 
 ## 反模式禁令（质量红线）
 
