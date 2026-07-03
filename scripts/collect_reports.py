@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""产业研究报告数据采集脚本（双数据源版）。
-支持：
+"""投资研究数据采集脚本（双数据源·双模式版）。
+
+支持两种模式：
+  --mode industry  行业研报采集（默认）
+  --mode company   个股研报采集
+
+数据源：
 1. iwencai report-search（需 IWENCAI_API_KEY）
 2. 东方财富 reportapi（免费公开接口，无需 Key）
 
-当两个源都可用时，合并去重后输出；只有一个可用时，降级使用单源；都不可用时报错。
+输出约定：
+  行业模式 → raw/industry/{行业名}/
+  公司模式 → raw/company/{代码}/
 """
 
 import argparse
@@ -405,7 +412,7 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
     - 都不可用 → 报错
     """
     output_dir = Path(output_dir)
-    raw_dir = output_dir / "raw" / industry
+    raw_dir = output_dir / "raw" / "industry" / industry
     raw_dir.mkdir(parents=True, exist_ok=True)
 
     all_reports = {}  # dict {uid_or_key: report}
@@ -600,38 +607,165 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
     print(f"  失败环节: {failed_segments}")
 
 
+# ============================================================
+# 公司模式采集
+# ============================================================
+
+def collect_company_reports(code, months, size, api_key, base_url, timeout, output_dir, force_iwencai_only=False):
+    """公司模式采集：按股票代码拉取个股研报。"""
+    code = str(code).zfill(6)
+    output_dir = Path(output_dir)
+    raw_dir = output_dir / "raw" / "company" / code
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    all_reports = {}
+    sources_used = []
+    source_stats = {}
+
+    has_iwencai_key = bool(api_key)
+    has_eastmoney = not force_iwencai_only and check_eastmoney_available()
+
+    print(f"\n{'='*60}")
+    print(f"[公司采集] 代码: {code}")
+    print(f"[公司采集] 时间范围: {months} 个月")
+    print(f"[公司采集] iwencai API Key: {'✓ 已配置' if has_iwencai_key else '✗ 未配置'}")
+    print(f"[公司采集] 东财 reportapi: {'✓ 可访问' if has_eastmoney else '✗ 不可访问或跳过'}")
+    print(f"{'='*60}\n")
+
+    if not has_iwencai_key and not has_eastmoney:
+        print("[错误] 无可用的数据源！请配置 IWENCAI_API_KEY 或确保能访问东财 reportapi。")
+        sys.exit(1)
+
+    # --- 东财个股研报 (qType=0) ---
+    if has_eastmoney:
+        try:
+            em_records = call_eastmoney_stock_reports(code, months)
+            print(f"[东财] 获取 {len(em_records)} 篇个股研报")
+            for rec in em_records:
+                key = rec["uid"]
+                if key not in all_reports:
+                    all_reports[key] = rec
+            sources_used.append("eastmoney")
+            source_stats["eastmoney"] = len(em_records)
+        except Exception as e:
+            print(f"[东财] 获取个股研报失败: {e}")
+
+    # --- iwencai 搜索 ---
+    if has_iwencai_key:
+        queries = [
+            f"{code} 研报",
+            f"{code} 深度分析 研报",
+        ]
+        iwencai_count = 0
+        dedup_count = 0
+        for q in queries:
+            try:
+                status, payload = call_iwencai(q, max(size, 20), api_key, base_url, timeout)
+                if status != 200 or not payload:
+                    print(f"[iwencai] 请求 '{q}' 返回状态 {status}")
+                    continue
+                items = payload.get("data", []) or []
+                for raw in items:
+                    rec = parse_iwencai_report(raw) if isinstance(raw, dict) else None
+                    if not rec:
+                        continue
+                    key = rec.get("uid", "")
+                    if not key:
+                        continue
+                    if key not in all_reports:
+                        all_reports[key] = rec
+                        iwencai_count += 1
+                    else:
+                        dedup_count += 1
+            except Exception as e:
+                print(f"[iwencai] 搜索 '{q}' 失败: {e}")
+                continue
+            time.sleep(1)
+        if iwencai_count > 0:
+            sources_used.append("iwencai")
+            source_stats["iwencai"] = iwencai_count
+        print(f"[iwencai] 新增 {iwencai_count} 篇（去重排除 {dedup_count} 篇）")
+
+    # --- 输出 ---
+    report_list = list(all_reports.values())
+    report_list.sort(key=lambda x: x.get("date", ""), reverse=True)
+
+    index_data = {
+        "mode": "company",
+        "code": code,
+        "code_name": report_list[0].get("institution", "") if report_list else "",
+        "fetch_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "time_range": f"{(datetime.now() - timedelta(days=months*30)).strftime('%Y-%m-%d')} ~ {datetime.now().strftime('%Y-%m-%d')}",
+        "total_reports": len(report_list),
+        "sources_used": sources_used,
+        "source_stats": source_stats,
+        "reports": report_list,
+    }
+
+    index_path = raw_dir / "reports.json"
+    with open(index_path, "w", encoding="utf-8") as f:
+        json.dump(index_data, f, ensure_ascii=False, indent=2)
+    print(f"[输出] {index_path}")
+
+    print(f"\n[完成] 共采集 {len(report_list)} 篇个股研报（去重后）")
+    print(f"  数据源: {', '.join(sources_used) if sources_used else '无'}")
+    if source_stats:
+        for src, cnt in source_stats.items():
+            print(f"    {src}: {cnt} 篇")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="产业研究报告数据采集（双数据源版）")
-    parser.add_argument("--industry", required=True, help="行业名")
-    parser.add_argument("--segments", required=True, help="产业环节列表，逗号分隔")
+    parser = argparse.ArgumentParser(description="投资研究数据采集（双数据源·双模式）")
+    parser.add_argument("--mode", default="industry", choices=["industry", "company"],
+                        help="采集模式：industry=行业研报（默认）, company=个股研报")
+    parser.add_argument("--industry", default=None, help="行业名（mode=industry 时必填）")
+    parser.add_argument("--segments", default=None, help="产业环节列表，逗号分隔（mode=industry 时必填）")
+    parser.add_argument("--code", default=None, help="股票代码，6位数字（mode=company 时必填）")
     parser.add_argument("--months", type=int, default=3, help="时间范围（月），默认 3")
     parser.add_argument("--size", type=int, default=10, help="每环节拉取篇数（仅 iwencai），默认 10")
     parser.add_argument("--base-url", default=os.getenv("IWENCAI_BASE_URL", DEFAULT_BASE_URL))
     parser.add_argument("--timeout", type=int, default=30)
-    parser.add_argument("--output-dir", default=None, help="输出目录，默认为当前工作目录")
+    parser.add_argument("--output-dir", default=None, help="输出根目录，默认为当前工作目录")
     parser.add_argument("--force-iwencai", action="store_true", default=False,
                         help="强制仅用 iwencai，不检测东财（降级模式）")
     args = parser.parse_args()
 
     api_key = os.getenv("IWENCAI_API_KEY")
-    segments = [s.strip() for s in args.segments.split(",") if s.strip()]
-    if not segments:
-        print("[错误] segments 不能为空", file=sys.stderr)
-        sys.exit(1)
-
     output_dir = args.output_dir or os.getcwd()
 
-    collect_reports(
-        industry=args.industry,
-        segments=segments,
-        months=args.months,
-        size=args.size,
-        api_key=api_key,
-        base_url=args.base_url,
-        timeout=args.timeout,
-        output_dir=output_dir,
-        force_iwencai_only=args.force_iwencai,
-    )
+    if args.mode == "company":
+        if not args.code:
+            print("[错误] --mode company 需要 --code 参数", file=sys.stderr)
+            sys.exit(1)
+        collect_company_reports(
+            code=args.code,
+            months=args.months,
+            size=args.size,
+            api_key=api_key,
+            base_url=args.base_url,
+            timeout=args.timeout,
+            output_dir=output_dir,
+            force_iwencai_only=args.force_iwencai,
+        )
+    else:
+        if not args.industry or not args.segments:
+            print("[错误] --mode industry 需要 --industry 和 --segments 参数", file=sys.stderr)
+            sys.exit(1)
+        segments = [s.strip() for s in args.segments.split(",") if s.strip()]
+        if not segments:
+            print("[错误] segments 不能为空", file=sys.stderr)
+            sys.exit(1)
+        collect_reports(
+            industry=args.industry,
+            segments=segments,
+            months=args.months,
+            size=args.size,
+            api_key=api_key,
+            base_url=args.base_url,
+            timeout=args.timeout,
+            output_dir=output_dir,
+            force_iwencai_only=args.force_iwencai,
+        )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,87 @@
-# Changelog
+  # Changelog
+
+  ## [2.0.6] - 2026-07-04
+
+  ### Fixed
+  - **公司报告竞争对比卡片公司名写死**：`company_report.html` 中"和谁比较才合理"卡片的「{公司}的位置」标签和「与{公司}的差距」表头硬编码为"华微电子"，导致非华微公司（如东方财富）报告渲染错位。改为动态读取 `d.company_name`，两个全球对标 fallback 文案中的"华微"也同步替换。
+
+  ---
+
+  ## [2.0.5] - 2026-07-04
+
+  ### Fixed
+  - **公司模式 iwencai 搜索崩溃**：`collect_company_reports()` 把 `call_iwencai()` 返回的 `(status, payload)` 元组当 list 迭代，触发 `'int' object has no attribute 'get'`，导致 iwencai 个股研报长期返回 0。修复后正确解包 + 调 `parse_iwencai_report()` 规范化字段。东方财富验证：iwencai 0 → 21 篇。
+  - **产业链流程图 fallback 数据错位**：东方财富分析 JSON 缺 `chain_flow` 字段时，模板 fallback 显示华微电子的"硅片/碳化硅衬底"半导体产业链内容。已为东方财富和华微电子的 `analysis.json` 显式补充 `chain_flow` 字段。
+  - **盈利逻辑卡片序号遮挡文字**：旧版用 32px 大号水印（绝对定位右上角）覆盖标题区域，导致长文本被遮挡。改为卡片顶部左侧小号角标 "NO.0X"（11px 蓝色 70% 透明度），左侧色条移到左边竖向展示，标题独占整行不被覆盖
+
+---
+
+## [2.0.3] - 2026-07-04
+
+### Changed
+- **竞争对比合并为单卡**：全球对标 + 国内对比合并为一张「和谁比较才合理」卡片，上方为公司定位栏，下方为统一表格（对标公司 | 定位与实力 | 与华微的差距）
+- **盈利逻辑 UI 升级**：从简单列表改为 3 列卡片式布局，带序号水印（01/02/03）和顶部色条，视觉层次更丰富
+- **全局细节优化**：
+  - 标题栏加左侧 4px 竖线装饰（card h2::before）
+  - 元信息行加圆点分隔符（meta .dot）
+  - 身份卡片加悬停效果（identity-item :hover）
+  - 业务卡片加悬停边框（biz-card :hover）、占比改为标签样式
+  - 产业链中游盒子 highlighted（chain-box.highlight）
+  - 间距统一：header padding 40→44px，card margin-bottom 20→24px，全局 spacing 更宽松
+  - 风险列表从 border-bottom 改为 gap 间距排布
+
+---
+
+## [2.0.2] - 2026-07-04
+
+### Changed
+- **`templates/company_report.html` 界面重构**：参考研究卡片布局（康宁公司案例），重新设计公司深度分析模板
+  - 单页竖向卡片式结构，信息流更聚焦
+  - 保留现有配色方案（深色 header #1a1a2e + 白色卡片 + 蓝色强调色）
+  - 精简卡片数量，移除机构研报矩阵和 EPS 预测与一致性预期卡片
+  - 新增模块：一句话看懂、公司身份、产业链定位、核心概念关系、增量驱动、业务拆分、竞争对比、盈利逻辑、证据/卡点、关键跟踪指标、研究路径、风险反证
+- **`references/company_format.md` 精简**：数据模型从 20+ 字段精简到 14 个核心字段，明确 v2.2 已弃用字段（reports/eps_forecast/moat/growth_mechanism/valuation 对象）
+- **华微电子 analysis.json 重写**：按新字段模型生成，数据更聚焦、更结构化
+
+### Fixed
+- 报告生成后不再展示空白的"机构研报矩阵"和"EPS 预测"占位卡片
+
+---
+
+## [2.0.1] - 2026-07-04
+
+### Fixed
+- **`company_collect.py` fetch_profile() 名称/行业返回错误**：旧版 name 字段返回股票代码而非中文简称（f57/f58 映射错误），industry 字段返回空。修复：切换为主力数据源问财 iwencai query2data API（获取名称/行业/上市日期/主营/PE/PB），东财 push2 仅辅助行情快照（价格/成交量）
+- **`company_collect.py` fetch_financial() 返回全空**：东财 datacenter API (`RPT_F10_FINANCE_MAINFINADATA`) 不可靠，替换为问财 iwencai query2data 查询（ROE/毛利率/净利率/营收/利润/同比/每股指标），12 个财务字段全部恢复正常
+
+### Changed
+- `company_collect.py` 数据源架构从"东财为主"改为"问财 iwencai（主力）+ 东财 push2（辅助）"，提升可靠性和字段完整性
+- 新增 `_iwencai_query()` / `_extract_number()` / `_extract_str()` 工具函数，统一问财数据解析
+- 移除 `fetch_industry_info()` 和独立的 `fetch_quote()`，合并进 `fetch_profile()` 双源逻辑
+- 验证：华微电子（600360）四类数据全部正确返回（名称/行业/PE/PB/ROE/毛利率等）
+
+---
+
+## [2.0.0] - 2026-07-03
+
+### Added
+- **公司分析模式**：Skill 新增 `--mode company` 分支，支持个股深度分析（个股研报 + 财务数据 + 行情估值 + AI 分析 → HTML 报告）
+- **`scripts/company_collect.py`**（新建）：公司非研报数据采集模块。对接东方财富免费接口，提供 `fetch_profile()`/`fetch_financial()`/`fetch_valuation()`/`fetch_kline()` 4 个核心函数。输出到 `raw/company/{代码}/`
+- **`templates/company_report.html`**（新建）：公司分析独立 HTML 模板（约 320 行），含公司名片、一句话判断、研报矩阵、EPS 预测柱状图、财务基本面、护城河分析、增长机制、风险反证、证据来源等级等模块。UI 沿用行业模板配色体系，不影响现有行业模板
+- **`references/company_format.md`**（新建）：公司分析 analysis.json 完整字段定义和写作规范（profile_info/financial/valuation/moat/risks/evidence_sources 等）
+- **triggers 追加**：SKILL.md 新增"公司深度分析""查XX公司""查XX股票""个股研报""股票分析""公司研究""这家公司怎么样"等公司分析入口关键词
+
+### Changed
+- **`collect_reports.py`**：新增 `--mode` 参数（industry/company）；`--mode company` 按股票代码采集个股研报（qType=0 + iwencai 自然语言搜索）；`--mode industry` 输出路径改为 `raw/industry/{行业名}/`
+- **`build_report.py`**：新增 `--mode` 参数与双模板路由逻辑；`load_template()` 根据 mode 自动选择 report.html 或 company_report.html
+- **SKILL.md**：拆分为 Part A（行业模式）+ Part B（公司模式）两条独立工作流，含完整的数据模型和 Step-by-step 流程
+- **文件隔离策略**：行业数据走 `raw/industry/`、`analysis/industry/`、`output/industry/`；公司数据走 `raw/company/`、`analysis/company/`、`output/company/`。三层统一隔离
+- **CHANGELOG.md**：新增 v2.0.0 条目
+
+### Fixed
+- `build_data_source()` 移除已废弃的 index.json fallback 逻辑（v1 遗留），统一从 analysis.json 读取 sources_used
+
+---
 
 ## [1.3.0] - 2026-07-03
 
