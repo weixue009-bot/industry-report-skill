@@ -309,7 +309,7 @@ function esc(s) {
       return '<div class="' + cls + '"><div class="title">' + esc(box.title) + '</div><div class="desc">' + esc(box.desc) + '</div></div>';
     }).join('<div class="chain-arrow">→</div>');
   } else {
-    flow.innerHTML = '<div class="chain-box"><div class="title">上游</div><div class="desc">硅片 / 碳化硅衬底 / 材料</div></div><div class="chain-arrow">→</div><div class="chain-box highlight"><div class="title">中游 · 华微电子</div><div class="desc">功率半导体 IDM 制造</div></div><div class="chain-arrow">→</div><div class="chain-box"><div class="title">下游</div><div class="desc">新能源车 / 光伏 / 工业</div></div>';
+    flow.innerHTML = '<div class="chain-box"><div class="title">待补充</div><div class="desc">请在 analysis.json 中填写 chain_flow 字段（上游 / 中游 / 下游结构）</div></div>';
   }
 
   // 核心概念关系
