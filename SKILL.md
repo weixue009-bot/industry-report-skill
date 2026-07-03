@@ -447,7 +447,7 @@ Agent 读取以上全部数据，生成 `analysis/company/{代码}/analysis.json
     "market_cap": "143.66亿", "price": 14.96, "pe_ttm": 81.70, "pb": 4.09,
     "main_business": "主营业务一句话"
   },
-  "one_sentence_view": "用'不是...而是...'句式点出核心定位，普通人5秒看懂",
+  "one_sentence_view": "一句话点出核心定位，用'X是什么角色，关键看什么'句式，让普通人5秒看懂。不要用'不是...而是...'句式",
   "chain_positioning": "公司在产业链中的位置，200-300字",
   "chain_flow": [
     {"title": "上游", "desc": "上游描述"},
@@ -504,7 +504,7 @@ Agent 读取以上全部数据，生成 `analysis/company/{代码}/analysis.json
 详细字段说明见 `references/company_format.md`。
 
 **分析要求：**
-- `one_sentence_view` 用"不是...而是..."句式，必须让普通人 5 秒看懂
+- `one_sentence_view` 用"X是什么角色，关键看什么"句式，必须让普通人 5 秒看懂。不用"不是...而是..."句式
 - 护城河和增长机制已被 `real_bottlenecks` / `growth_drivers` / `profit_logic` 替代，不需要单独写 moat 或 growth_mechanism
 - 风险必须具体可验证，不泛泛写"宏观经济下行"
 - 证据来源分三级：A=一手/年报/公告，B=券商研报，C=线索/待验证
