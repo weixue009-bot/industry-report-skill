@@ -1,5 +1,46 @@
 # Changelog
 
+## [1.2.2] - 2026-07-03
+
+### Fixed
+- **竞争格局卡片 4 行精准等高（改进版）**：v1.2.1 的 `align-items:stretch` + `min-height:56px` 方案行高不够精确。升级为 `.landscape-rows` 使用 `display:grid; grid-template-rows: repeat(4, 1fr)` 强制四行各占 25% 高度；`.landscape-key` 加右框分隔；`.two-col .card` 加 `display:flex;flex-direction:column` 保证卡片组件上下垂直对齐。左右两张竞争格局卡片的 4 行逐行严格对齐。
+
+---
+
+## [1.2.1] - 2026-07-03
+
+### Fixed
+- **环节子页首屏价值量占比匹配为 0%**：原 `cost_breakdown` 用详细名（"无框力矩电机"、"力传感器"），但 segments 用简称（"电机"、"传感器"），名称不匹配导致 `ratio_map.get(name, 0)` 全返回 0。修复：增加 `value_ratios` 显式映射表（丝杠19 / 减速器13 / 电机16 / 传感器11 / 灵巧手6 / 具身智能模型3）。
+- **竞争格局大量字段"待补充"**：原 `parse_landscape()` 自动解析函数过简陋，正则只匹配到「主导厂商」。改为手工为 6 个环节完整补充 4 个字段（主导厂商/份额结构/技术/工艺代差/进入壁垒）。
+- **总览产业链核心环节价值量占比未同步**：`supply_chain.core_segments` 旧数据中"丝杠"等没有价值量后缀，改为"丝杠（19%）"等带括号百分比，模板自动拆分为加粗标题+灰色占比描述。
+
+### Changed
+- 写作规范明确：`value_ratio` 数字不带 `%` 符号；`localization_progress` 80-150 字；竞争格局建议写结构化对象。
+
+---
+
+## [1.2.0] - 2026-07-03
+
+### Changed
+- **环节子页首屏三卡片布局**：原来的单卡片「环节定位」改为左侧「环节定位」+ 右上「价值量占比」+ 右下「国产化进展」三卡片组合，信息密度更高。
+- **竞争格局结构化**：国际竞争格局 / 国内竞争格局两张卡片不再显示一段长文本，而是统一按 4 个字段分条展示：主导厂商、份额结构、技术/工艺代差、进入壁垒。
+- **产业链核心环节显示价值量占比**：`supply_chain.core_segments` 支持在环节名后加 `（占比%）`（如"丝杠（19%）"），模板会自动拆分为加粗标题 + 灰色占比描述。
+
+### Added
+- `analysis.json` 中每个 segment 新增字段：
+  - `value_ratio`：该环节价值量占比（%）
+  - `localization_progress`：国产化进展描述
+  - `evidence_sources`：该环节内容的证据来源列表，每项包含 `source`（研报标题）、`institution`（券商/来源）、`date`（可选）
+- `analysis.json` 中 `international_landscape` / `domestic_landscape` 支持结构化对象：{"主导厂商": "...", "份额结构": "...", "技术/工艺代差": "...", "进入壁垒": "..."}。旧版字符串仍可兼容显示。
+- 新增「证据来源」卡片：环节子页底部展示该环节内容引用的研报列表。
+- 新增 CSS 类：`.segment-top`、`.pos-card`、`.metric-card`、`.landscape-card`、`.landscape-rows`、`.evidence-card`、`.evidence-list` 等。
+- `formatItem()` 支持中英文括号 `"标题(说明)"` 和 `"标题（说明）"` 两种写法。
+
+### Fixed
+- 产业链盒子"标题（说明）"格式使用中文括号时无法拆分的问题。
+
+---
+
 ## [1.1.0] - 2026-07-03
 
 ### Fixed
@@ -24,47 +65,9 @@
 - `.sc-box-title` / `.sc-box-desc` 产业链盒子双行格式支持。
 - `formatItem()` JS 函数：解析"标题(说明)"格式并拆分渲染。
 
-## [1.2.0] - 2026-07-03
-
-### Changed
-- **环节子页首屏三卡片布局**：原来的单卡片「环节定位」改为左侧「环节定位」+ 右上「价值量占比」+ 右下「国产化进展」三卡片组合，信息密度更高。
-- **竞争格局结构化**：国际竞争格局 / 国内竞争格局两张卡片不再显示一段长文本，而是统一按 4 个字段分条展示：主导厂商、份额结构、技术/工艺代差、进入壁垒。
-- **产业链核心环节显示价值量占比**：`supply_chain.core_segments` 支持在环节名后加 `（占比%）`（如"丝杠（19%）"），模板会自动拆分为加粗标题 + 灰色占比描述。
-
-### Added
-- `analysis.json` 中每个 segment 新增字段：
-  - `value_ratio`：该环节价值量占比（%）
-  - `localization_progress`：国产化进展描述
-  - `evidence_sources`：该环节内容的证据来源列表，每项包含 `source`（研报标题）、`institution`（券商/来源）、`date`（可选）
-- `analysis.json` 中 `international_landscape` / `domestic_landscape` 支持结构化对象：{"主导厂商": "...", "份额结构": "...", "技术/工艺代差": "...", "进入壁垒": "..."}。旧版字符串仍可兼容显示。
-- 新增「证据来源」卡片：环节子页底部展示该环节内容引用的研报列表。
-- 新增 CSS 类：`.segment-top`、`.pos-card`、`.metric-card`、`.landscape-card`、`.landscape-rows`、`.evidence-card`、`.evidence-list` 等。
-- `formatItem()` 支持中英文括号 `"标题(说明)"` 和 `"标题（说明）"` 两种写法。
-
-### Fixed
-- 产业链盒子"标题（说明）"格式使用中文括号时无法拆分的问题。
-
-## [1.2.2] - 2026-07-03
-
-### Fixed
-- **竞争格局卡片 4 行精准等高（改进版）**：v1.2.1 的 `align-items:stretch` + `min-height:56px` 方案行高不够精确。升级为 `.landscape-rows` 使用 `display:grid; grid-template-rows: repeat(4, 1fr)` 强制四行各占 25% 高度；`.landscape-key` 加右框分隔；`.two-col .card` 加 `display:flex;flex-direction:column` 保证卡片组件上下垂直对齐。左右两张竞争格局卡片的 4 行逐行严格对齐。
-
 ---
 
-## [1.2.1] - 2026-07-03
-
-### Fixed
-- **环节子页首屏价值量占比匹配为 0%**：原 `cost_breakdown` 用详细名（"无框力矩电机"、"力传感器"），但 segments 用简称（"电机"、"传感器"），名称不匹配导致 `ratio_map.get(name, 0)` 全返回 0。修复：增加 `value_ratios` 显式映射表（丝杠19 / 减速器13 / 电机16 / 传感器11 / 灵巧手6 / 具身智能模型3）。
-- **竞争格局大量字段"待补充"**：原 `parse_landscape()` 自动解析函数过简陋，正则只匹配到「主导厂商」。改为手工为 6 个环节完整补充 4 个字段（主导厂商/份额结构/技术/工艺代差/进入壁垒）。
-- **总览产业链核心环节价值量占比未同步**：`supply_chain.core_segments` 旧数据中"丝杠"等没有价值量后缀，改为"丝杠（19%）"等带括号百分比，模板自动拆分为加粗标题+灰色占比描述。
-- **竞争格局卡片 4 行精准等高**：旧方案用 `align-items: stretch` + `min-height: 56px` 的行高仍不一致。改为 `.landscape-rows` 用 `display:grid; grid-template-rows: repeat(4, 1fr)` 强制四行各占 25%，`.landscape-key` 加右边框分隔 key/val，`.two-col .card` 加 `flex-direction: column` 确保卡片组件上下对齐。左右两卡片的 4 行逐行精准对齐。
-
-### Changed
-- 写作规范明确：`value_ratio` 数字不带 `%` 符号；`localization_progress` 80-150 字；竞争格局建议写结构化对象。
-
----
-
-## [1.2.0] - 2026-07-03
+## [1.0.0] - 2026-07-03
 
 ### Added
 - 双数据源平级采集架构（同花顺 iwencai report-search + 东方财富 reportapi）
@@ -88,6 +91,8 @@
 - `_meta.json` 标注依赖环境变量 `IWENCAI_API_KEY`
 - `SKILL.md` 新增双数据源说明、降级策略
 - `collect_reports.py` 重构为双数据源架构
+
+---
 
 ## [0.1.0] - 2026-03
 
