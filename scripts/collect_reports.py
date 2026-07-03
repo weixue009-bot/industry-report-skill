@@ -171,6 +171,7 @@ def call_eastmoney_industry_reports(industry_keywords, months, page_size=50):
                     "uid": f"em_{item.get('infoCode', '')}",
                     "title": title.strip(),
                     "summary": "",
+                    "content": "",
                     "institution": (item.get("orgSName") or "").strip(),
                     "analyst": "",
                     "date": pub_time,
@@ -181,6 +182,9 @@ def call_eastmoney_industry_reports(industry_keywords, months, page_size=50):
                     "industry_name": item.get("industryName", ""),
                     "industry_code": item.get("industryCode", ""),
                     "attach_pages": item.get("attachPages", 0),
+                    "eps_this_year": item.get("predictThisYearEps") or None,
+                    "eps_next_year": item.get("predictNextYearEps") or None,
+                    "eps_next_two_year": item.get("predictNextTwoYearEps") or None,
                 }
                 all_records.append(record)
 
@@ -242,6 +246,7 @@ def call_eastmoney_stock_reports(code, months, page_size=50):
                     "uid": f"em_{item.get('infoCode', '')}",
                     "title": (item.get("title") or "").strip(),
                     "summary": "",
+                    "content": "",
                     "institution": (item.get("orgSName") or "").strip(),
                     "analyst": "",
                     "date": pub_time,
@@ -250,6 +255,9 @@ def call_eastmoney_stock_reports(code, months, page_size=50):
                     "source": "eastmoney",
                     "info_code": item.get("infoCode", ""),
                     "industry_name": item.get("indvInduName", ""),
+                    "eps_this_year": item.get("predictThisYearEps") or None,
+                    "eps_next_year": item.get("predictNextYearEps") or None,
+                    "eps_next_two_year": item.get("predictNextTwoYearEps") or None,
                 }
                 all_records.append(record)
 
@@ -282,6 +290,27 @@ def check_eastmoney_available():
 # 统一的报告解析和去重
 # ============================================================
 
+# 统一 report record 字段定义（所有数据源统一输出此结构）：
+#   uid               str   唯一标识（iwencai 用 uid，东财用 em_{infoCode}）
+#   title             str   研报标题
+#   summary           str   摘要（200-300字）
+#   content           str   正文节选（500-2000字，iwencai 的 source_original）
+#   institution       str   券商/机构名
+#   analyst           str   分析师
+#   date              str   发布日期 YYYY-MM-DD
+#   url               str   报告原文链接
+#   rating            str   投资评级
+#   source            str   数据来源："iwencai" | "eastmoney"
+#   matched_segment   str   匹配到的产业链环节名（采集后设置）
+#   -- 东财独有字段 --
+#   info_code         str   东财 infoCode（用于拼 PDF URL）
+#   industry_name     str   东财行业分类名
+#   industry_code     str   东财行业代码
+#   attach_pages      int   PDF 页数
+#   eps_this_year     float|None  今年 EPS 预测
+#   eps_next_year     float|None  明年 EPS 预测
+#   eps_next_two_year float|None  后年 EPS 预测
+
 def parse_iwencai_report(item):
     """从 iwencai API 返回的单条记录中提取统一字段。"""
     uid = item.get("uid", "") or item.get("report_id", "") or item.get("id", "")
@@ -308,11 +337,14 @@ def parse_iwencai_report(item):
 
     url = item.get("url", "") or item.get("link", "") or item.get("report_url", "")
     rating = item.get("rating", "") or item.get("investment_rating", "")
+    # 正文节选：500-2000 字，远丰富于 summary（200-300字）
+    content = item.get("source_original", "") or item.get("content", "")
 
     return {
         "uid": uid,
         "title": str(title).strip(),
         "summary": str(summary).strip(),
+        "content": str(content).strip(),
         "institution": str(institution).strip(),
         "analyst": str(analyst).strip(),
         "date": str(publish_time).strip(),

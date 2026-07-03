@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.3.0] - 2026-07-03
+
+### Added
+- **源_original 正文节选字段**：collect_reports.py 的 iwencai 解析器新增 `content` 字段映射（对应 API 的 `source_original`），500-2000 字正文节选，远丰富于 200-300 字的 summary。
+- **东财 EPS 预测字段**：collect_reports.py 的东财解析器新增 `eps_this_year` / `eps_next_year` / `eps_next_two_year` 字段（来自 API 的 `predictThisYearEps` 等），为个股分析引入券商盈利预测。
+- **环节子页 EPS 列**：股票表格新增「盈利预测（EPS）」列，动态检测是否有数据后自动显示，格式为 `1.23→1.56` + `+26.8%`（红涨绿跌）。
+- **统一 record 字段声明注释**：collect_reports.py 模块头部新增全部 16 个字段的定义和类型注释。
+- `references/format.md` 新增「EPS 预测」专节。
+
+### Changed
+- **Step 4.1 研报读取升级为三层策略**：第1层 WebFetch 全文（最新 3 篇）→ 第2层 `content` 正文节选（500-2000 字）→ 第3层 `summary` 摘要（200-300 字），分析深度显著提升。
+- **analysis.json stocks[] 结构新增 `eps_forecast` 可选字段**：含 `this_year` / `next_year` / `next_two_year` / `growth_rate`.
+- **SKILL.md**：Step 4.1 三层读取说明、stocks 数据模型同步、脚本说明表更新、错误处理表更新。
+- **模板 CSS**：新增 `.col-eps` / `.eps-line` / `.eps-growth` 样式。
+
+---
+
 ## [1.2.2] - 2026-07-03
 
 ### Fixed

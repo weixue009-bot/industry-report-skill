@@ -98,6 +98,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .stock-table .col-role .tag{white-space:nowrap;display:inline-block;padding:4px 10px;font-size:12px}
 .stock-table th.col-irr, .stock-table td.col-irr{min-width:84px}
 .stock-table th.col-score, .stock-table td.col-score{min-width:72px;text-align:center}
+.stock-table th.col-eps, .stock-table td.col-eps{min-width:110px;text-align:center;font-size:13px}
+.eps-line{color:#444;font-size:13px;white-space:nowrap}
+.eps-growth{font-weight:700;font-size:12px;white-space:nowrap}
 .stock-table th.col-dim, .stock-table td.col-dim{min-width:64px;text-align:center}
 .stock-table th.col-note, .stock-table td.col-note{min-width:200px;line-height:1.6}
 .badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600}
@@ -703,12 +706,17 @@ function renderSegment(seg) {
   // Stock table
   const stocks = seg.stocks || [];
   if (stocks.length) {
+    // Check if any stock has EPS forecast data
+    const hasEps = stocks.some(s => s.eps_forecast && (s.eps_forecast.this_year || s.eps_forecast.next_year));
+
     html += '<div class="card"><div class="section-title">核心标的</div>';
     html += '<div style="overflow-x:auto"><table class="stock-table"><colgroup>';
     html += '<col class="col-name"><col class="col-code"><col class="col-role"><col class="col-irr"><col class="col-score">';
+    if (hasEps) { html += '<col class="col-eps">'; }
     for (let i = 0; i < dims.length; i++) { html += '<col class="col-dim">'; }
     html += '<col class="col-note"></colgroup><thead><tr>';
     html += '<th class="col-name">公司</th><th class="col-code">代码</th><th class="col-role">角色</th><th class="col-irr">不可替代性</th><th class="col-score">综合评分</th>';
+    if (hasEps) { html += '<th class="col-eps">盈利预测（EPS）</th>'; }
     for (const d of dims) { html += `<th class="col-dim">${escapeHtml(d.name)}</th>`; }
     html += '<th class="col-note">备注</th></tr></thead><tbody>';
 
@@ -723,6 +731,18 @@ function renderSegment(seg) {
       html += `<td class="col-role"><span class="tag ${roleTag}">${escapeHtml(role)}</span></td>`;
       html += `<td class="col-irr"><span class="tag ${irrTag}">${irr}</span></td>`;
       html += `<td class="col-score score-cell ${scoreColor(s.score)}">${s.score||'-'}</td>`;
+      if (hasEps) {
+        const ef = s.eps_forecast || {};
+        if (ef.this_year && ef.next_year) {
+          const growth = ef.growth_rate != null ? ef.growth_rate : ((ef.next_year - ef.this_year) / Math.abs(ef.this_year || 1) * 100);
+          const gColor = growth >= 0 ? '#e74c3c' : '#27ae60';
+          html += `<td class="col-eps"><span class="eps-line">${ef.this_year.toFixed(2)}→${ef.next_year.toFixed(2)}</span><br><span class="eps-growth" style="color:${gColor}">${growth>=0?'+':''}${growth.toFixed(1)}%</span></td>`;
+        } else if (ef.next_year) {
+          html += `<td class="col-eps"><span class="eps-line">—→${ef.next_year.toFixed(2)}</span></td>`;
+        } else {
+          html += '<td class="col-eps"><span style="color:#aaa">—</span></td>';
+        }
+      }
       if (s.score_detail) {
         for (const d of dims) {
           html += `<td class="col-dim score-cell ${scoreColor(s.score_detail[d.name]||0)}">${s.score_detail[d.name]||'-'}</td>`;
