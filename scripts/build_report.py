@@ -38,12 +38,53 @@ def load_analysis(data_path):
         return json.load(f)
 
 
+def build_data_source(industry, analysis):
+    """根据实际使用的数据源动态生成数据来源说明。
+    优先从 analysis JSON 中的 sources_used / source_stats 读取，
+    若没有则回退到 index.json，都没有则使用默认文本。
+    """
+    sources_used = analysis.get("sources_used", [])
+    source_stats = analysis.get("source_stats", {})
+
+    # 如果 analysis 中没有，尝试从 index.json 读取
+    if not sources_used:
+        index_path = Path("raw") / industry / "index.json"
+        if index_path.exists():
+            try:
+                with open(index_path, "r", encoding="utf-8") as f:
+                    idx = json.load(f)
+                sources_used = idx.get("sources_used", [])
+                source_stats = idx.get("source_stats", {})
+            except Exception:
+                pass
+
+    if not sources_used:
+        return "数据来源：研究报告数据库"
+
+    labels = {
+        "iwencai": "同花顺i问财",
+        "eastmoney": "东方财富",
+    }
+    parts = ["数据来源："]
+    source_names = []
+    for s in sources_used:
+        label = labels.get(s, s)
+        count = source_stats.get(s, 0)
+        if count:
+            source_names.append(f"{label}（{count}篇）")
+        else:
+            source_names.append(label)
+    parts.append(" + ".join(source_names))
+    return "".join(parts)
+
+
 def build_html(template, analysis):
     """将分析数据注入模板，生成完整 HTML。"""
     industry = analysis.get("industry", "未知行业")
     fetch_time = analysis.get("fetch_time", datetime.now().strftime("%Y-%m-%d"))
     time_range = analysis.get("time_range", "未知")
     report_count = analysis.get("source_report_count", 0)
+    data_source = build_data_source(industry, analysis)
 
     # 序列化 JSON 用于嵌入
     data_json = json.dumps(analysis, ensure_ascii=False, indent=2)
@@ -53,6 +94,7 @@ def build_html(template, analysis):
     html = html.replace("{{GEN_TIME}}", fetch_time)
     html = html.replace("{{REPORT_COUNT}}", str(report_count))
     html = html.replace("{{TIME_RANGE}}", time_range)
+    html = html.replace("{{DATA_SOURCE}}", data_source)
     html = html.replace("{{DATA_JSON}}", data_json)
 
     # 验证所有占位符都已替换

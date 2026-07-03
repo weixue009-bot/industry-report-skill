@@ -29,19 +29,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 
 /* Supply Chain */
 .supply-chain{display:flex;flex-direction:column;gap:0;width:100%;max-width:100%}
-.sc-layer{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:8px;width:100%;box-sizing:border-box}
+.sc-layer{display:flex;align-items:stretch;gap:14px;padding:14px 16px;border-radius:10px;width:100%;box-sizing:border-box}
 .sc-layer-demand{background:linear-gradient(135deg,#e8ecf1 0%,#d5dae3 100%);border-left:4px solid #2c3e50}
-.sc-layer-core{background:linear-gradient(135deg,#fef5e7 0%,#fdebd0 100%);border-left:4px solid #e67e22;flex-wrap:wrap}
-.sc-layer-upstream{background:linear-gradient(135deg,#eaecee 0%,#d5dbdb 100%);border-left:4px solid #7f8c8d;flex-wrap:wrap}
-.sc-layer-label{flex-shrink:0;width:88px;font-size:14px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;justify-content:center;padding:8px 12px;background:rgba(255,255,255,.7);border-radius:6px}
-.sc-layer-content{display:flex;gap:8px;flex-wrap:wrap;flex:1;align-items:stretch}
-.sc-box{color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;min-width:90px;box-shadow:0 1px 3px rgba(0,0,0,.12);text-align:center;line-height:1.3;flex:1 1 auto;max-width:200px;min-height:42px}
-.sc-arrow{display:flex;justify-content:center;align-items:center;padding:0;margin:0;height:32px}
-.sc-arrow svg{height:32px;max-width:60px}
+.sc-layer-core{background:linear-gradient(135deg,#fef5e7 0%,#fdebd0 100%);border-left:4px solid #e67e22}
+.sc-layer-upstream{background:linear-gradient(135deg,#eaecee 0%,#d5dbdb 100%);border-left:4px solid #7f8c8d}
+.sc-layer-label{flex-shrink:0;width:88px;font-size:14px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;justify-content:center;padding:10px 12px;background:rgba(255,255,255,.85);border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.sc-layer-content{display:grid;gap:10px;flex:1;align-items:stretch;min-width:0}
+.sc-grid-1{grid-template-columns:1fr}
+.sc-grid-2{grid-template-columns:repeat(2,1fr)}
+.sc-grid-3{grid-template-columns:repeat(3,1fr)}
+.sc-grid-4{grid-template-columns:repeat(4,1fr)}
+.sc-grid-5{grid-template-columns:repeat(5,1fr)}
+.sc-grid-6{grid-template-columns:repeat(6,1fr)}
+.sc-box{color:#fff;padding:12px 14px;border-radius:8px;font-size:13px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.45;box-shadow:0 1px 3px rgba(0,0,0,.12);min-height:64px;word-break:break-word;hyphens:auto}
+.sc-box-title{font-size:14px;font-weight:700;margin-bottom:4px;opacity:.95}
+.sc-box-desc{font-size:12px;opacity:.85;font-weight:400;line-height:1.5}
+.sc-arrow{display:flex;justify-content:center;align-items:center;padding:0;margin:0;height:28px}
+.sc-arrow svg{height:28px;max-width:60px}
 
 /* Score Grid */
 .score-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
 .score-item{text-align:center;padding:16px;background:#f8f9fc;border-radius:10px}
+.two-col .score-grid{grid-template-columns:1fr;gap:10px}
+.two-col .score-item{display:flex;align-items:center;gap:12px;text-align:left;padding:10px 14px}
+.two-col .score-item .score-label{width:88px;flex-shrink:0;margin-bottom:0;font-size:13px;font-weight:600;color:#1a1a2e}
+.two-col .score-item .score-value{font-size:20px;width:36px;flex-shrink:0;text-align:right}
+.two-col .score-item .score-bar{flex:1;min-width:80px;margin:0}
+.two-col .score-item .score-note{font-size:12px;color:#777;flex:1;min-width:140px;line-height:1.5}
 .score-label{font-size:13px;color:#666;margin-bottom:6px}
 .score-bar{width:100%;height:8px;background:#e8ecf1;border-radius:4px;overflow:hidden;margin:8px 0}
 .score-fill{height:100%;border-radius:4px;transition:width .4s ease}
@@ -80,7 +94,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .stock-table .score-cell.low{color:#27ae60}
 .stock-table th.col-name, .stock-table td.col-name{min-width:96px}
 .stock-table th.col-code, .stock-table td.col-code{min-width:96px;color:#999}
-.stock-table th.col-role, .stock-table td.col-role{min-width:84px}
+.stock-table th.col-role, .stock-table td.col-role{min-width:84px;width:84px;white-space:nowrap;text-align:center}
+.stock-table .col-role .tag{white-space:nowrap;display:inline-block;padding:4px 10px;font-size:12px}
 .stock-table th.col-irr, .stock-table td.col-irr{min-width:84px}
 .stock-table th.col-score, .stock-table td.col-score{min-width:72px;text-align:center}
 .stock-table th.col-dim, .stock-table td.col-dim{min-width:64px;text-align:center}
@@ -102,8 +117,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .dim-score.low{color:#27ae60}
 
 /* Grid layouts */
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}
 @media(max-width:768px){.two-col{grid-template-columns:1fr}}
+.two-col .card{height:100%;display:flex;flex-direction:column}
 
 /* Footer */
 .report-footer{text-align:center;padding:32px;color:#999;font-size:12px;border-top:1px solid #e8ecf1;margin-top:32px}
@@ -125,8 +141,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .tag.medium{background:#fef3c7;color:#d97706}
 .tag.low-replace{background:#dcfce7;color:#16a34a}
 
-/* Overview cards grid */
-.overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+/* Segment page layouts */
+.segment-top{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:16px}
+.segment-top .pos-card{grid-row:1 / span 2;display:flex;flex-direction:column;justify-content:center}
+.segment-top .metric-card{display:flex;flex-direction:column;justify-content:center;min-height:100px}
+.segment-top .metric-value{font-size:32px;font-weight:700;color:#e74c3c;margin-bottom:6px}
+.segment-top .metric-label{font-size:13px;color:#666;font-weight:600}
+.segment-top .metric-desc{font-size:13px;color:#888;margin-top:6px;line-height:1.5}
+
+.landscape-card{background:#fff;display:flex;flex-direction:column;position:relative}
+.landscape-rows{display:flex;flex-direction:column;gap:0;border:1px solid #e8ecf1;border-radius:8px;overflow:hidden;flex:1;height:100%}
+.landscape-rows{display:grid;grid-template-rows:repeat(4,1fr)}
+.landscape-row{display:flex;align-items:stretch;border-bottom:1px solid #eef2f7}
+.landscape-row:last-child{border-bottom:none}
+.landscape-key{width:110px;flex-shrink:0;background:#f8f9fc;padding:14px;font-size:13px;font-weight:600;color:#555;display:flex;align-items:center;border-right:1px solid #eef2f7}
+.landscape-val{flex:1;padding:14px;font-size:13px;color:#444;line-height:1.7;display:flex;align-items:center}
+
+.evidence-card{background:#fff}
+.evidence-list{display:flex;flex-direction:column;gap:10px}
+.evidence-item{padding:12px 14px;background:#f8f9fc;border-radius:8px;border-left:3px solid #0f3460}
+.evidence-title{font-size:13px;font-weight:600;color:#1a1a2e;margin-bottom:4px}
+.evidence-meta{font-size:12px;color:#888}
 
 /* Stock card */
 .stock-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:16px;transition:box-shadow .2s}
@@ -143,6 +178,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .concept-table tr:last-child td{border-bottom:none}
 .concept-table td:first-child{font-weight:700;white-space:nowrap;width:160px}
 .concept-table ul{margin:0;padding-left:16px}
+.concept-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:8px}
+.concept-card{background:linear-gradient(135deg,#f8f9fc 0%,#eef2f7 100%);border-left:3px solid #0f3460;border-radius:6px;padding:14px 18px;transition:all .2s}
+.concept-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(15,52,96,.12)}
+.concept-title{font-size:15px;font-weight:700;color:#0f3460;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #dde3ec}
+.concept-points{margin:0;padding-left:18px}
+.concept-points li{font-size:13px;color:#555;line-height:1.7;margin-bottom:6px}
+.concept-points li::marker{color:#0f3460}
+.pool-table{width:100%;border-collapse:collapse;margin-top:4px;font-size:13px;table-layout:fixed;word-break:break-word}
+.pool-table th{background:#f8f9fc;padding:10px 12px;text-align:left;font-weight:600;color:#333;border-bottom:2px solid #e0e4ea;font-size:13px;white-space:nowrap}
+.pool-table th.col-name{width:25%;min-width:120px}
+.pool-table th.col-seg{width:18%;min-width:90px}
+.pool-table th.col-logic{width:auto}
+.pool-table td{padding:12px;border-bottom:1px solid #f0f1f5;color:#444;line-height:1.6;vertical-align:middle}
+.pool-table td.col-seg{white-space:nowrap;font-size:13px;color:#666}
+.pool-table td.col-logic{white-space:normal;word-break:break-word;overflow-wrap:break-word;line-height:1.55}
+.pool-table tr:last-child td{border-bottom:none}
+.pool-table td.col-name{white-space:nowrap}
+.pool-stock{font-weight:700;color:#1a1a2e;margin-right:6px}
+.pool-code{color:#999;font-size:12px;font-family:'SF Mono','Consolas',monospace}
 
 /* Profit logic cards */
 .profit-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
@@ -175,7 +229,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 <div class="report-header">
   <h1>{{INDUSTRY}} 产业研究报告</h1>
   <div class="meta">
-    <span>数据来源：同花顺i问财</span>
+    <span>{{DATA_SOURCE}}</span>
     <span>生成时间：{{GEN_TIME}}</span>
     <span>覆盖研报：{{REPORT_COUNT}} 篇</span>
     <span>时间范围：{{TIME_RANGE}}</span>
@@ -190,7 +244,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 
 <!-- Footer -->
 <div class="report-footer">
-  数据来源：同花顺i问财 · 研报内容来自各券商研究所 · 仅供参考，不构成投资建议<br>
+  {{DATA_SOURCE}} · 研报内容来自各券商研究所 · 仅供参考，不构成投资建议<br>
   生成工具：WorkBuddy Industry Report Skill · {{GEN_TIME}}
 </div>
 
@@ -275,18 +329,18 @@ function renderOverview() {
     </div>`;
   }
 
-  // 4. Concept clarification - "先分清N件事"
+  // 4. Concept clarification - "先分清N件事" — 改为卡片网格，每维度独立卡片
   const cc = o.concept_clarification || [];
   if (cc.length) {
-    html += '<div class="card"><h2>先分清三件事</h2><div style="overflow-x:auto"><table class="concept-table"><thead><tr>';
-    for (const c of cc) { html += `<th>${escapeHtml(c.dimension)}</th>`; }
-    html += '</tr></thead><tbody><tr>';
+    html += '<div class="card"><h2>先分清' + (cc.length>3?cc.length:'三') + '件事</h2><div class="concept-grid">';
     for (const c of cc) {
-      html += '<td><ul>';
+      html += `<div class="concept-card">
+        <div class="concept-title">${escapeHtml(c.dimension)}</div>
+        <ul class="concept-points">`;
       for (const p of (c.points||[])) { html += `<li>${escapeHtml(p)}</li>`; }
-      html += '</ul></td>';
+      html += `</ul></div>`;
     }
-    html += '</tr></tbody></table></div></div>';
+    html += '</div></div>';
   }
 
   // 5. Supply chain diagram
@@ -312,26 +366,28 @@ function renderOverview() {
           <div class="score-label">${escapeHtml(d.name)}</div>
           <div class="score-value ${scoreColor(d.score)}">${d.score}</div>
           <div class="score-bar"><div class="score-fill ${scoreColor(d.score)}" style="width:${d.score}%"></div></div>
-          <div style="font-size:12px;color:#999;margin-top:4px">${escapeHtml(d.note||'')}</div>
+          <div class="score-note">${escapeHtml(d.note||'')}</div>
         </div>`;
       }
       html += '</div></div>';
     }
 
-    // 7. Core stock pool - grouped by role
+    // 7. Core stock pool - table-style grouped
     if (hasPool) {
       html += '<div class="card"><h2>核心标的池</h2>';
       for (const g of groups2) {
-        html += `<div style="margin-bottom:18px">
-          <div style="font-size:14px;font-weight:700;color:#0f3460;margin-bottom:8px">${escapeHtml(g.category)}<span style="color:#999;font-weight:400;font-size:12px;margin-left:8px">${escapeHtml(g.role_desc||'')}</span></div>`;
+        html += `<div style="margin-bottom:20px">
+          <div style="margin-bottom:8px"><span style="font-size:14px;font-weight:700;color:#0f3460">${escapeHtml(g.category)}</span> <span style="color:#888;font-size:12px">${escapeHtml(g.role_desc||'')}</span></div>
+          <table class="pool-table">
+            <thead><tr><th class="col-name">名称/代码</th><th class="col-seg">细分环节</th><th class="col-logic">入选逻辑</th></tr></thead><tbody>`;
         for (const s of (g.stocks||[])) {
-          html += `<div class="stock-card" style="margin-bottom:8px">
-            <div class="stock-name">${escapeHtml(s.name)} <span class="stock-code">${escapeHtml(s.code||'')}</span></div>
-            <div class="stock-segment">${escapeHtml(s.segment||'')}</div>
-            <div class="stock-logic">${escapeHtml(s.logic||'')}</div>
-          </div>`;
+          html += `<tr>
+            <td class="col-name"><span class="pool-stock">${escapeHtml(s.name)}</span><span class="pool-code">${escapeHtml(s.code||'')}</span></td>
+            <td class="col-seg">${escapeHtml(s.segment||'')}</td>
+            <td class="col-logic">${escapeHtml(s.logic||'')}</td>
+          </tr>`;
         }
-        html += '</div>';
+        html += '</tbody></table></div>';
       }
       html += '</div>';
     }
@@ -472,15 +528,30 @@ function renderSupplyChain(sc) {
   const coreColors = ['#e74c3c','#e67e22','#3498db','#1abc9c','#9b59b6','#e91e63','#16a085'];
   const upColors = ['#7f8c8d','#95a5a6','#7f8c8d','#95a5a6','#bdc3c7'];
 
+  // 格式化条目：支持 "标题(说明)" 或 "标题（说明）" 形式，拆为标题+描述
+  function formatItem(item) {
+    const m = String(item).match(/^([^()（）]+)[(（]([^)）]+)[)）]\s*$/);
+    if (m) {
+      return { title: m[1].trim(), desc: m[2].trim() };
+    }
+    return { title: String(item), desc: '' };
+  }
+
   function renderLayer(title, items, colors, layerType) {
+    const n = items.length;
+    const gridClass = n <= 1 ? 'sc-grid-1' : n <= 2 ? 'sc-grid-2' : n <= 3 ? 'sc-grid-3' : n <= 4 ? 'sc-grid-4' : n <= 5 ? 'sc-grid-5' : 'sc-grid-6';
     const boxes = items.map((item, i) => {
       const color = colors[i % colors.length];
-      return `<div class="sc-box" style="background:${color}">${escapeHtml(item)}</div>`;
+      const f = formatItem(item);
+      const inner = f.desc
+        ? `<div class="sc-box-title">${escapeHtml(f.title)}</div><div class="sc-box-desc">${escapeHtml(f.desc)}</div>`
+        : `<div class="sc-box-title">${escapeHtml(f.title)}</div>`;
+      return `<div class="sc-box" style="background:${color}">${inner}</div>`;
     }).join('');
     return `
       <div class="sc-layer sc-layer-${layerType}">
         <div class="sc-layer-label">${title}</div>
-        <div class="sc-layer-content">${boxes}</div>
+        <div class="sc-layer-content ${gridClass}">${boxes}</div>
       </div>`;
   }
 
@@ -507,22 +578,53 @@ function renderSupplyChain(sc) {
 function renderSegment(seg) {
   let html = '';
 
-  // Positioning
-  html += `<div class="card">
+  // 1. Top section: 3 cards (positioning + value ratio + localization)
+  const hasRatio = seg.value_ratio !== undefined && seg.value_ratio !== null;
+  const hasLocalization = seg.localization_progress;
+  html += '<div class="segment-top">';
+  html += `<div class="card pos-card">
     <div class="section-title">环节定位</div>
     <div style="font-size:14px;line-height:1.8;white-space:pre-wrap">${escapeHtml(seg.positioning || '待补充')}</div>
   </div>`;
+  if (hasRatio) {
+    html += `<div class="card metric-card">
+      <div class="metric-value">${seg.value_ratio}%</div>
+      <div class="metric-label">价值量占比</div>
+      <div class="metric-desc">占人形机器人BOM成本约${seg.value_ratio}%</div>
+    </div>`;
+  }
+  if (hasLocalization) {
+    html += `<div class="card metric-card">
+      <div class="section-title" style="margin-bottom:8px;font-size:14px">国产化进展</div>
+      <div style="font-size:13px;line-height:1.7;color:#555;white-space:pre-wrap">${escapeHtml(seg.localization_progress)}</div>
+    </div>`;
+  }
+  html += '</div>';
 
-  // Two column: international + domestic
+  // 2. Two column: international + domestic landscape
+  function renderLandscapeCard(title, landscape) {
+    // Support both old string and new structured object
+    const isStructured = landscape && typeof landscape === 'object' && !Array.isArray(landscape);
+    let rows = '';
+    if (isStructured) {
+      const keys = ['主导厂商', '份额结构', '技术/工艺代差', '进入壁垒'];
+      for (const k of keys) {
+        const v = landscape[k] || '待补充';
+        rows += `<div class="landscape-row"><div class="landscape-key">${escapeHtml(k)}</div><div class="landscape-val">${escapeHtml(v)}</div></div>`;
+      }
+    } else {
+      // Fallback for legacy string
+      rows = `<div class="landscape-row"><div class="landscape-key">概况</div><div class="landscape-val">${escapeHtml(landscape || '待补充')}</div></div>`;
+    }
+    return `<div class="card landscape-card">
+      <div class="section-title">${escapeHtml(title)}</div>
+      <div class="landscape-rows">${rows}</div>
+    </div>`;
+  }
+
   html += '<div class="two-col">';
-  html += `<div class="card">
-    <div class="section-title">国际竞争格局</div>
-    <div style="font-size:14px;line-height:1.8;white-space:pre-wrap">${escapeHtml(seg.international_landscape || '待补充')}</div>
-  </div>`;
-  html += `<div class="card">
-    <div class="section-title">国内竞争格局</div>
-    <div style="font-size:14px;line-height:1.8;white-space:pre-wrap">${escapeHtml(seg.domestic_landscape || '待补充')}</div>
-  </div>`;
+  html += renderLandscapeCard('国际竞争格局', seg.international_landscape);
+  html += renderLandscapeCard('国内竞争格局', seg.domestic_landscape);
   html += '</div>';
 
   // Product tiers
@@ -632,6 +734,21 @@ function renderSegment(seg) {
       html += '</tr>';
     }
     html += '</tbody></table></div></div>';
+  }
+
+  // Evidence sources
+  const evidence = seg.evidence_sources || [];
+  if (evidence.length) {
+    const items = evidence.map(e => `
+      <div class="evidence-item">
+        <div class="evidence-title">${escapeHtml(e.source || '')}</div>
+        <div class="evidence-meta">来源：${escapeHtml(e.institution || '研报数据库')} ${e.date ? '· ' + escapeHtml(e.date) : ''}</div>
+      </div>
+    `).join('');
+    html += `<div class="card evidence-card">
+      <div class="section-title">证据来源</div>
+      <div class="evidence-list">${items}</div>
+    </div>`;
   }
 
   return html;
