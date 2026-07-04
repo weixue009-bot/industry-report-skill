@@ -30,9 +30,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 /* Supply Chain */
 .supply-chain{display:flex;flex-direction:column;gap:0;width:100%;max-width:100%}
 .sc-layer{display:flex;align-items:stretch;gap:14px;padding:14px 16px;border-radius:10px;width:100%;box-sizing:border-box}
-.sc-layer-demand{background:linear-gradient(135deg,#e8ecf1 0%,#d5dae3 100%);border-left:4px solid #2c3e50}
-.sc-layer-core{background:linear-gradient(135deg,#fef5e7 0%,#fdebd0 100%);border-left:4px solid #e67e22}
 .sc-layer-upstream{background:linear-gradient(135deg,#eaecee 0%,#d5dbdb 100%);border-left:4px solid #7f8c8d}
+.sc-layer-core{background:linear-gradient(135deg,#fef5e7 0%,#fdebd0 100%);border-left:4px solid #e67e22}
+.sc-layer-demand{background:linear-gradient(135deg,#e8ecf1 0%,#d5dae3 100%);border-left:4px solid #2c3e50}
+/* sc-layer-label 是通用标签样式，无论上游/核心/需求端均相同 */
+.sc-layer-label{flex-shrink:0;width:88px;font-size:14px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;justify-content:center;padding:10px 12px;background:rgba(255,255,255,.85);border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
 .sc-layer-label{flex-shrink:0;width:88px;font-size:14px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;justify-content:center;padding:10px 12px;background:rgba(255,255,255,.85);border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
 .sc-layer-content{display:grid;gap:10px;flex:1;align-items:stretch;min-width:0}
 .sc-grid-1{grid-template-columns:1fr}
@@ -524,21 +526,18 @@ function renderSupplyChain(sc) {
   const core = sc.core_segments || [];
   const upstream = sc.upstream || [];
 
-  // 按 segment.name 从 segments 数组查 value_ratio，用于在核心环节 box 上显示占比
+  // 按 segment.name 从 segments 数组查 value_ratio
   const segName2Ratio = {};
   for (const s of segments) {
     if (s.name) segName2Ratio[s.name] = s.value_ratio;
   }
 
-  const segNames = segments.map(s => s.name);
-  const coreItems = core.length >= segNames.length ? core : segNames;
+  // 直接渲染 core_segments，不 fallback 到 segNames
+  // core_segments 必须与 segments[].name 对齐——已在 format.md 中约束
+  const coreItems = core;
 
-  // 兼容格式：把 "靶点发现与药物设计" 映射到对应 segment（含在前沿技术中）
-  // 让 coreItems 显示时按匹配到的 segment 名称带上 value_ratio
   function lookupRatio(itemTitle) {
-    // 直接匹配
     if (segName2Ratio[itemTitle] !== undefined) return segName2Ratio[itemTitle];
-    // 模糊匹配：item 包含某个 segment.name，或 segment.name 包含 item
     for (const s of segments) {
       if (!s.name) continue;
       if (itemTitle.indexOf(s.name) >= 0 || s.name.indexOf(itemTitle) >= 0) {
@@ -548,12 +547,27 @@ function renderSupplyChain(sc) {
     return null;
   }
 
-  // Color palettes - single warm accent
+  // HSL 色相均匀分布：根据环节数量动态生成核心颜色
+  // 色相范围 0-360，从 200°（蓝）开始走暖色方向，避开冷色重复
+  // 饱和度 60% + 亮度 50% = 柔和且与现有模板 #0f3460 蓝色强调色协调
+  function genCoreColors(n) {
+    if (n === 0) return [];
+    if (n === 1) return ['hsl(200, 60%, 50%)'];
+    const hueStart = 200;
+    const hueRange = 280; // 从 200° 持续到 480°(即 120°) 覆盖蓝→绿→黄→橙→红
+    const step = hueRange / (n - 1);
+    const colors = [];
+    for (let i = 0; i < n; i++) {
+      const hue = (hueStart + i * step) % 360;
+      colors.push(`hsl(${hue}, 60%, 50%)`);
+    }
+    return colors;
+  }
+
   const demandColors = ['#2c3e50','#34495e','#4a5f7a','#2c3e50','#34495e'];
-  const coreColors = ['#e74c3c','#e67e22','#3498db','#1abc9c','#9b59b6','#e91e63','#16a085'];
+  const coreColors = genCoreColors(coreItems.length);
   const upColors = ['#7f8c8d','#95a5a6','#7f8c8d','#95a5a6','#bdc3c7'];
 
-  // 格式化条目：支持 "标题(说明)" 或 "标题（说明）" 形式，拆为标题+描述
   function formatItem(item) {
     const m = String(item).match(/^([^()（）]+)[(（]([^)）]+)[)）]\s*$/);
     if (m) {
@@ -568,7 +582,6 @@ function renderSupplyChain(sc) {
     const boxes = items.map((item, i) => {
       const color = colors[i % colors.length];
       const f = formatItem(item);
-      // 仅在核心环节 layer 上显示价值量占比
       let ratioBadge = '';
       if (layerType === 'core') {
         const ratio = lookupRatio(f.title);
@@ -588,22 +601,26 @@ function renderSupplyChain(sc) {
       </div>`;
   }
 
-  function renderArrow(direction) {
-    return `<div class="sc-arrow sc-arrow-${direction}">
+  function renderArrow(down) {
+    // down=true 箭头向下, down=false 箭头向上
+    const dir = down ? 'down' : 'up';
+    const markerColor = '#0f3460';
+    return `<div class="sc-arrow sc-arrow-${dir}">
       <svg width="100%" height="36" viewBox="0 0 200 36" preserveAspectRatio="xMidYMid meet">
-        <defs><marker id="sc-arrow-${direction}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0f3460"/></marker></defs>
-        <line x1="100" y1="2" x2="100" y2="28" stroke="#0f3460" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#sc-arrow-${direction})"/>
+        <defs><marker id="sc-arrow-${dir}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="${markerColor}"/></marker></defs>
+        <line x1="100" y1="2" x2="100" y2="28" stroke="${markerColor}" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#sc-arrow-${dir})"/>
       </svg>
     </div>`;
   }
 
+  // 自上而下：上游 → 核心环节 → 需求端
   return `
     <div class="supply-chain">
-      ${renderLayer('需求端', demand, demandColors, 'demand')}
-      ${renderArrow('down')}
-      ${renderLayer('核心环节', coreItems, coreColors, 'core')}
-      ${renderArrow('up')}
       ${renderLayer('上游材料与设备', upstream, upColors, 'upstream')}
+      ${renderArrow(true)}
+      ${renderLayer('核心环节', coreItems, coreColors, 'core')}
+      ${renderArrow(true)}
+      ${renderLayer('需求端', demand, demandColors, 'demand')}
     </div>`;
 }
 

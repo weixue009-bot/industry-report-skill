@@ -1,5 +1,26 @@
   # Changelog
 
+  ## [2.5.0] - 2026-07-04
+
+  ### Changed
+
+  - **产业链结构卡片流水线翻转自上而下**：`renderSupplyChain()` 改为 `上游材料与设备 → 核心环节 → 需求端`（原为需求端→核心→上游，箭头方向与产业逻辑相反）。箭头均向下，SVG 箭头的 `<line y1/y2>` 方向统一为 top→bottom。
+  - **核心环节配色从固定7色改为 HSL 色相动态生成**：旧版 `coreColors` 固定 7 色数组（`['#e74c3c','#e67e22','...']`），环节超 7 时颜色重复。新版 `genCoreColors(n)` 从 200°(蓝) 到 120°(绿) 连续 280° 渐变，饱和度 60%/亮度 50%；相邻环节色相自然过渡，N 个环节 N 色互不重复。
+
+  ### Removed
+
+  - **`renderSupplyChain()` 的 `coreItems` fallback 逻辑**：旧版 `const coreItems = core.length >= segNames.length ? core : segNames` 在 core_segments 数量少于 segments 数量时，自动用 `segments[].name` 替换全部 core_segments，隐藏了数据层不一致。新版直接用 `core`，核心环节显式渲染 `core_segments`，要求必须与 `segments[]` 对齐（已在 format.md 约束）。
+
+  ## [2.4.1] - 2026-07-04
+
+  ### Fixed
+
+  - **Write 工具大文件截断导致 analysis.json 字段丢失**：有色金属 `analysis.json`（~60KB）在初始写入时被静默截断，铜/黄金/铝 3 个 segment 的 `stocks`（9只标的）和 overview 的 `core_stock_pool`（13只标的）全部丢失。修复：通过 Python 脚本 `json.dump()` 方式补回。
+
+  ### Added
+
+  - **`references/format.md` 新增「大文件写入规范」**：明确 Write 工具有 ~30-40KB 限制，规定 4 条规则（分步编码 / 逐 segment 写 / 写入后校验 / 尾部字段优先检查）和示例校验命令。
+
   ## [2.4.0] - 2026-07-04
 
   ### Changed

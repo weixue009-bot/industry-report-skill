@@ -558,7 +558,8 @@ python "C:\Users\001\.workbuddy\skills\industry-report\scripts\build_report.py" 
 | `scripts/collect_reports.py` | **三数据源·双模式采集**：--mode industry 拉行业研报（iwencai 关键词 + 东财行业字段过滤 + fxbaogao 发现报告搜索）；--mode company 拉个股研报（qType=0 + iwencai + fxbaogao 搜索），三源合并去重 |
 | `scripts/company_collect.py` | **公司数据采集（v2.3·腾讯财经版）**：问财 iwencai（基本面+财务）+ 腾讯财经 qt.gtimg.cn（行情+日K线，免费不封IP），已彻底移除东财 push2/push2his 依赖 |
 | `scripts/build_report.py` | **双模板路由**：--mode industry 注入行业模板；--mode company 注入公司模板。动态渲染数据来源，Windows 需 `PYTHONIOENCODING=utf-8` |
-| `templates/report.html` | 行业分析 HTML 模板（CSS + JS 渲染） |
+| `templates/report.html` | 行业分析 HTML 模板（CSS + JS 渲染）——产业链结构卡片 v2.5：上游→核心→需求端自上而下流向，HSL 动态色相均匀分布 |
+
 | `templates/company_report.html` | 公司分析 HTML 模板（CSS + JS 渲染） |
 | `references/format.md` | 行业分析字段写作规范 |
 | `references/company_format.md` | 公司分析字段写作规范 |
@@ -568,8 +569,9 @@ python "C:\Users\001\.workbuddy\skills\industry-report\scripts\build_report.py" 
 ## 关键约束
 
 **通用：**
-1. **analysis.json 直接写入文件**，不要打印到 stdout（避免编码问题）
-2. **所有路径使用绝对路径**
+1. **analysis.json 直接写入 Python 脚本文件，用 `json.dump()` 输出**，不要用 `Write` 工具一次性写入大 JSON 字符串（Write 工具有 ~30-40KB 大小限制，超大 JSON 会被静默截断；Python 脚本 `json.dump()` 无此限制）
+2. **analysis.json 写入后必须执行校验**：运行 `json.load()` 验证 `segments` 数量 + 每个 segment 的 `stocks` 数组长度，确认未被截断。详见 `references/format.md`「大文件写入规范」
+3. **所有路径使用绝对路径**
 
 **行业模式：**
 3. **环节来源**：要么用户提供，要么 AI 从研报中自动发现——二者必居其一，不能凭空编造
@@ -577,6 +579,7 @@ python "C:\Users\001\.workbuddy\skills\industry-report\scripts\build_report.py" 
 5. **供应链数据来自研报**：`supply_chain.demand`、`supply_chain.upstream` 等字段必须基于研报实际内容，不用模板默认值
 6. **评分必须有研报依据**
 7. **core_segments 命名必须与 segment.name 精确匹配**：`core_segments` 每一项括号外的部分必须与对应 `segments[].name` 完全一致（可选括号补充说明），否则模板无法匹配 value_ratio，box 上的价值量占比不会显示。详见 `references/format.md`「核心环节命名规则」章节
+8. **`renderSupplyChain` 不再有 fallback**：模板直接渲染 `supply_chain.core_segments`，不再自动 fallback 到 `segments[].name`。若 core_segments 与 segments 不同步，页面会直接显示异常——**写 analysis.json 时必须确保两者对齐**
 
 **公司模式：**
 7. **公司代码必须是有效代码**：6 位数字。如用户给简称，Agent 需先转换为代码再采集
