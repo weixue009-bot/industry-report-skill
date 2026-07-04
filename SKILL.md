@@ -522,7 +522,14 @@ Agent 读取以上全部数据，生成 `analysis/company/{代码}/analysis.json
 }
 ```
 
-详细字段说明见 `references/company_format.md`。
+**⚠️ 公司 analysis.json 字段格式校验清单（写完后逐项检查）**：
+
+`company_format.md` 有完整规范，这里列最易出错的 5 条：
+1. ✅ `chain_flow` 是 **数组** `[{title,desc,highlight?}]`，不是对象
+2. ✅ `business_breakdown` 是 **对象** `{description, segments:[]}`，不是裸数组
+3. ✅ `key_theme_relation` 必须有 `summary`（string），否则显示"待补充"
+4. ✅ `real_bottlenecks` 是 **对象数组** `[{bottleneck, detail}]`，不是字符串数组
+5. ✅ `company_identity.market_cap` 是 **字符串** `"143.66亿"`，不是数字
 
 **分析要求：**
 - `one_sentence_view` 用"X是什么角色，关键看什么"句式，必须让普通人 5 秒看懂。不用"不是...而是..."句式

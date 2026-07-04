@@ -1,224 +1,323 @@
-# 公司分析字段写作规范（v2.2 精简版）
+# 公司分析字段写作规范（v2.3 模板驱动版）
 
-## 数据模型概览
+## 核心原则
 
-公司分析 `analysis.json` 采用精简的卡片式结构，只保留关键判断字段：
+**模板驱动数据**。`company_report.html` 的 JS 渲染逻辑定义了 18 个顶层字段的精确结构。Step B3 写 `analysis.json` 时，必须严格按照以下清单逐一填写——字段名、数据类型、嵌套结构任何一个不匹配，都会导致对应卡片显示"待补充"或渲染异常。
+
+---
+
+## 公司 analysis.json 全字段清单
+
+模板 `company_report.html` 第 274-398 行定义 18 个顶层字段的渲染顺序。以下按模板读取顺序排列：
+
+| 序号 | 卡片 | 顶层字段 | 模板行 | 数据类型 | 必填 | 常见错误 |
+|:--:|------|---------|:-----:|:--------:|:--:|---------|
+| 1 | header | `company_name` | 280 | string | ✅ | 缺字段 |
+| 2 | header | `fetch_time` | 284 | string | ✅ | 缺字段 |
+| 3 | 一句话看懂 | `one_sentence_view` | 288 | string | ✅ | 缺字段 |
+| 4 | 公司身份 | `company_identity` | 275 | **对象** | ✅ | 缺字段/结构错 |
+| 5 | 产业链 | `chain_positioning` | 305 | **string** (文本) | ✅ | 缺字段 |
+| 6 | 产业链流程 | `chain_flow` | 307 | **数组** `[{title,desc,highlight?}]` | ✅ | 写成对象而非数组 |
+| 7 | 核心概念关系 | `key_theme_relation` | 317 | **对象** `{theme,summary,points[]}` | ✅ | 缺 `summary` |
+| 8 | 增量驱动 | `growth_drivers` | 326 | **数组** `[{driver,impact,note}]` | ✅ | 缺字段 |
+| 9 | 业务拆分 | `business_breakdown` | 334 | **对象** `{description,segments:[{name,share,note}]}` | ✅ | 写成裸数组 |
+| 10 | 竞争对比 | `competitive_comparison` | 342 | **对象** `{position_summary,global_companies[],china_companies[]}` | ✅ | 缺 `position_summary` |
+| 11 | 盈利逻辑 | `profit_logic` | 368 | **数组** `[string]` | ✅ | 缺字段 |
+| 12 | 证据来源 | `evidence_sources` | 374 | **数组** `[{level,content,source}]` | ✅ | 缺字段 |
+| 13 | 真正的卡点 | `real_bottlenecks` | 381 | **数组** `[{bottleneck,detail}]` | ✅ | 写成字符串数组 |
+| 14 | 关键跟踪指标 | `key_metrics` | 388 | **数组** `[{metric,target,why}]` | ✅ | 缺字段 |
+| 15 | 研究路径 | `research_path` | 394 | string | ✅ | 缺字段 |
+| 16 | 风险反证 | `risks` | 397 | **数组** `[string]` | ✅ | 缺字段 |
+| 17 | meta | `code` | 282 | string | ✅ | — |
+| 18 | meta | `company_identity.main_business` | 281 | string | ✅ | 缺字段 |
+
+### 字段格式规则（上海机电修复经验总结）
 
 ```json
 {
-  "mode": "company",
-  "code": "600360",
-  "company_name": "华微电子",
-  "fetch_time": "2026-07-04",
-  "time_range": "2026-04 ~ 2026-07",
-  "source_report_count": 0,
-  "sources_used": ["iwencai"],
-  "source_stats": {"iwencai": 0, "eastmoney": 0},
-  "company_identity": { ... },
-  "one_sentence_view": "...",
-  "chain_positioning": "...",
-  "key_theme_relation": { ... },
-  "growth_drivers": [...],
-  "business_breakdown": { ... },
-  "competitive_comparison": { ... },
-  "profit_logic": [...],
-  "real_bottlenecks": [...],
-  "key_metrics": [...],
-  "research_path": "...",
-  "financial_snapshot": { ... },
-  "risks": [...],
-  "evidence_sources": [...]
+  // ⚠️ company_identity 必须有 market_cap（字符串+亿单位），模板读 ci.market_cap
+  "company_identity": {
+    "market_cap": "176.06亿",        // 字符串！模板不读 market_cap_yi
+    "price": 21.83,
+    "pe_ttm": 28.65,
+    "pb": 1.57,
+    "main_business": "电梯、机电装备"
+  },
+
+  // ⚠️ chain_flow 必须是数组，不是对象！
+  // 第 307 行检查：d.chain_flow && d.chain_flow.length
+  // 对象没有 .length 属性 → 条件为 false → 走 fallback
+  "chain_flow": [
+    {"title": "上游", "desc": "原材料", "highlight": false},
+    {"title": "中游 · 公司", "desc": "核心业务", "highlight": true},
+    {"title": "下游", "desc": "终端客户"}
+  ],
+
+  // ⚠️ key_theme_relation 必须有 summary（string），否则显示"待补充"
+  // 模板第 319 行：kt.summary || '待补充'
+  "key_theme_relation": {
+    "theme": "核心概念",
+    "summary": "一句话说明公司与核心概念的真实关系",
+    "points": ["要点1", "要点2"]
+  },
+
+  // ⚠️ business_breakdown 必须是对象，嵌套 segments 数组
+  // 模板第 334 行：var bb = d.business_breakdown || {}; bb.segments
+  // 裸数组会令 bb.segments 为 undefined → 不渲染
+  "business_breakdown": {
+    "description": "业务拆分说明",
+    "segments": [
+      {"name": "业务线", "share": "~X%", "note": "说明"}
+    ]
+  },
+
+  // ⚠️ real_bottlenecks 必须是对象数组 [{bottleneck, detail}]
+  // 模板第 382-383 行遍历 b.bottleneck / b.detail
+  // 字符串数组会渲染 undefined → 卡片内空
+  "real_bottlenecks": [
+    {"bottleneck": "卡点名称", "detail": "具体说明"}
+  ],
+
+  // ✅ 以下 4 个字段是简单的数组或字符串，出错概率低
+  // growth_drivers: [{driver, impact, note}] — 数组对象
+  // profit_logic: [string] — 字符串数组
+  // evidence_sources: [{level, content, source}] — 对象数组
+  // key_metrics: [{metric, target, why}] — 对象数组
 }
 ```
 
 ---
 
-## company_identity — 公司身份
+## 各字段详细写作规范
 
-| 字段 | 说明 |
-|------|------|
-| `code` | 股票代码 |
-| `name` | 公司简称 |
-| `industry` | 所属行业 |
-| `market_cap` | 总市值（格式化后的字符串，如"143.66亿"） |
-| `price` | 当前股价 |
-| `pe_ttm` | PE(TTM) |
-| `pb` | PB |
-| `main_business` | 一句话主营业务 |
-
----
-
-## one_sentence_view — 一句话看懂
-
-- 用"不是...而是..."句式点出核心定位
-- 普通人 5 秒内能看懂
-- 说明真正的研究逻辑是什么
-
-示例：
-> 华微电子不是AI概念股，而是新能源车和光伏储能需求驱动下的国产功率半导体IDM；它的研究逻辑不是'能不能蹭热点'，而是'国产替代和终端需求能否真正拉动它的IGBT/MOSFET放量，并改善毛利率'。
-
----
-
-## chain_positioning — 产业链定位
-
-- 公司在产业链中的位置（上游/中游/下游）
-- 核心客户是谁
-- 200-300 字，避免冗长
-
----
-
-## key_theme_relation — 核心概念关系
+### company_identity — 公司身份
 
 ```json
 {
-  "theme": "新能源 + 国产替代",
-  "summary": "一句话说明公司与核心概念的真实关系（不是蹭热点）",
+  "code": "600835",
+  "name": "上海机电",
+  "industry": "机械设备 — 专用设备 — 楼宇设备",
+  "market_cap": "176.06亿",       // ⚠️ 字符串，含"亿"单位，模板读 ci.market_cap
+  "price": 21.83,
+  "pe_ttm": 28.65,
+  "pb": 1.57,
+  "change_pct": 5.26,
+  "listing_date": "1994-02-24",
+  "main_business": "电梯、印刷包装机械、液压机械"
+}
+```
+
+- `market_cap` 必须是字符串格式（如"143.66亿"），模板第 294 行用 `String(it.value)` 渲染
+
+### one_sentence_view — 一句话看懂
+
+- 用"X 是什么角色，关键看什么"句式
+- 不再使用"不是...而是..."（已废弃，改后更自然）
+- 普通人 5 秒内能看懂核心研究逻辑
+
+### chain_positioning + chain_flow — 产业链
+
+- `chain_positioning`：文本描述（200-300字），模板读 `d.chain_positioning` 纯文本
+- `chain_flow`：**必须是数组** `[{title,desc,highlight?}]`，不是对象——模板第 307 行检查 `.length`
+- `chain_flow` 格式：上游(1个) → 中游·公司名(highlight=true) → 下游(1个)
+
+### key_theme_relation — 核心概念关系
+
+```json
+{
+  "theme": "概念名",
+  "summary": "一句话说明公司与概念的真实关系，不是蹭热点",  // 必填！
   "points": ["要点1", "要点2", "要点3"]
 }
 ```
 
----
+- `summary` 是**必填字段**（模板第 319 行 `kt.summary || '待补充'`）
 
-## growth_drivers — 增量驱动
-
-```json
-[
-  {"driver": "驱动因素", "impact": "高/中/低", "note": "一句话解释"}
-]
-```
-
-最多 3-4 条，按影响优先级排序。
-
----
-
-## business_breakdown — 业务拆分
+### business_breakdown — 业务拆分
 
 ```json
 {
-  "description": "业务拆分说明",
+  "description": "一句话总结公司业务结构",
   "segments": [
-    {"name": "业务线", "share": "占比", "note": "说明"}
+    {"name": "业务线名", "share": "~X%", "note": "该业务的核心说明"}
   ]
 }
 ```
 
-2-4 个业务线即可，不用过细。
+- **必须是对象**（含 `description` + `segments` 数组），不是裸数组
 
----
-
-## competitive_comparison — 竞争对比
+### competitive_comparison — 竞争对比
 
 ```json
 {
-  "global": "一句话说明全球格局",
-  "china": [
-    {"name": "公司名", "position": "一句话定位", "vs": "与目标公司的对比"}
+  "position_summary": "一句话说明该公司的市场定位",
+  "global_companies": [
+    {"name": "对标公司", "tag": "全球", "position": "定位", "vs": "与目标公司的差距"}
+  ],
+  "china_companies": [
+    {"name": "对标公司", "tag": "国内", "position": "定位", "vs": "与目标公司的差距"}
   ]
 }
 ```
 
-国内对比 2-3 家即可。
+- `position_summary` 是**必填字段**（模板第 345 行 `'待补充'`）
+- `global_companies` / `china_companies` 非必填，但建议至少写 2-3 家国内对比
 
----
+### real_bottlenecks — 真正的卡点
 
-## profit_logic — 盈利逻辑
+- **必须是对象数组** `[{bottleneck, detail}]`，不是字符串数组
+- 模板第 382-383 行遍历 `b.bottleneck` 和 `b.detail`——字符串数组这两个属性都是 undefined
 
-2-4 条，用动词开头，说明公司怎么赚钱、利润驱动是什么。
+### profit_logic — 盈利逻辑
 
----
+- 简单字符串数组 `["驱动1", "驱动2", "驱动3"]`
+- 用动词开头，3-4 条
 
-## real_bottlenecks — 真正的卡点
-
-```json
-[
-  {"bottleneck": "卡点名称", "detail": "具体说明"}
-]
-```
-
-2-4 条，必须具体可验证，不泛泛而谈。
-
----
-
-## key_metrics — 关键跟踪指标
+### evidence_sources — 证据来源
 
 ```json
 [
-  {"metric": "指标名", "target": "目标", "why": "为什么关注"}
+  {"level": "A", "content": "描述", "source": "来源"},
+  {"level": "B", "content": "描述", "source": "券商研报 2026-06-01"}
 ]
 ```
 
-3-5 个指标，目标值明确。
+- `level` 取值：A（一手）/ B（研报）/ C（线索）
+
+### key_metrics — 关键跟踪指标
+
+```json
+[
+  {"metric": "指标名", "target": "目标值/状态", "why": "为什么关注"}
+]
+```
 
 ---
 
-## research_path — 一句话研究路径
+## 公司 analysis.json 完整模板
 
-- 给出一条可执行的研究路线
-- 用箭头 → 连接
-- 示例：先确认行业周期 → 再跟踪产品出货 → 最后验证毛利率
-
----
-
-## financial_snapshot — 财务快照
-
-只保留最关键的 6-8 个指标：
+> 写 analysis.json 时，逐字段对照以下模板，缺任何字段都会导致对应卡片显示"待补充"。
 
 ```json
 {
-  "report_date": "2026Q1",
-  "revenue": 6.66,
-  "revenue_unit": "亿",
-  "revenue_yoy": 3.61,
-  "parent_netprofit": 0.58,
-  "profit_unit": "亿",
-  "profit_yoy": 5.44,
-  "gross_margin": 21.15,
-  "net_margin": 8.99,
-  "roe": 1.66,
-  "debt_ratio": 34.04,
-  "basic_eps": 0.06
+  "mode": "company",
+  "code": "600000",
+  "company_name": "公司简称",
+  "fetch_time": "2026-07-04",
+  "time_range": "2026-04 ~ 2026-07",
+  "source_report_count": 20,
+  "sources_used": ["fxbaogao"],
+  "source_stats": {"fxbaogao": 20},
+
+  "company_identity": {
+    "code": "600000",
+    "name": "公司简称",
+    "industry": "行业分类",
+    "market_cap": "XXX亿",                         // string！
+    "price": 21.83,
+    "pe_ttm": 28.65,
+    "pb": 1.57,
+    "change_pct": 5.26,
+    "listing_date": "YYYY-MM-DD",
+    "main_business": "主营业务一句话"
+  },
+
+  "one_sentence_view": "一句话核心研究逻辑",
+
+  "chain_positioning": "公司产业链定位文本描述（200-300字）",
+
+  "chain_flow": [                                    // 数组，不是对象！
+    {"title": "上游", "desc": "原材料"},
+    {"title": "中游 · 公司简称", "desc": "核心业务", "highlight": true},
+    {"title": "下游", "desc": "终端客户"}
+  ],
+
+  "key_theme_relation": {
+    "theme": "核心概念",
+    "summary": "一句话说明关系",                       // 必填！
+    "points": ["要点1", "要点2"]
+  },
+
+  "growth_drivers": [
+    {"driver": "驱动1", "impact": "高", "note": "说明"}
+  ],
+
+  "business_breakdown": {                            // 对象，不是数组！
+    "description": "业务结构说明",
+    "segments": [
+      {"name": "业务线", "share": "~X%", "note": "说明"}
+    ]
+  },
+
+  "competitive_comparison": {
+    "position_summary": "市场定位",
+    "global_companies": [
+      {"name": "对标", "tag": "全球", "position": "定位", "vs": "差距"}
+    ],
+    "china_companies": [
+      {"name": "对标", "tag": "国内", "position": "定位", "vs": "差距"}
+    ]
+  },
+
+  "profit_logic": [
+    "动词开头的盈利逻辑1",
+    "动词开头的盈利逻辑2"
+  ],
+
+  "evidence_sources": [
+    {"level": "A", "content": "内容", "source": "来源"}
+  ],
+
+  "real_bottlenecks": [                              // 对象数组，不是字符串数组！
+    {"bottleneck": "卡点名称", "detail": "具体说明"}
+  ],
+
+  "key_metrics": [
+    {"metric": "指标", "target": "目标", "why": "为什么关注"}
+  ],
+
+  "research_path": "一句话研究路径",
+
+  "risks": [
+    "具体风险描述"
+  ]
 }
 ```
 
----
+## 常见错误清单
 
-## risks — 风险与反证
-
-2-5 条，每条具体可验证。
-
----
-
-## evidence_sources — 证据来源
-
-```json
-[
-  {"level": "A", "content": "...", "source": "年报/公告"},
-  {"level": "B", "content": "...", "source": "券商研报"},
-  {"level": "C", "content": "...", "source": "线索待验证"}
-]
-```
-
-等级：A（一手）/ B（研报）/ C（线索）。
+| # | 错误 | 表现 | 根因 | 需要修正的格式 |
+|---|------|------|------|--------------|
+| 1 | `company_identity` 缺 `market_cap` | 身份卡片"总市值: N/A" | 腾讯财经返回 `market_cap_yi` 而非 `market_cap` | 新增 `"market_cap": "XXX亿"` |
+| 2 | `chain_flow` 写了对象而非数组 | 产业链流程显示"待补充" | 模板第 307 行检查 `.length`，对象无此属性 | 改为 `[{title,desc,highlight?}]` 数组 |
+| 3 | `key_theme_relation` 缺 `summary` | 核心概念关系显示"待补充" | 模板第 319 行 `kt.summary \|\| '待补充'` | 新增 `"summary"` 字符串字段 |
+| 4 | `business_breakdown` 写了裸数组 | 业务拆分卡片空 | 模板第 334 行读 `bb.segments`，数组无此属性 | 改为 `{description, segments:[]}` 对象 |
+| 5 | `real_bottlenecks` 写了字符串数组 | 卡点卡片空 | 模板第 382 行读 `b.bottleneck`，字符串为 undefined | 改为 `[{bottleneck, detail}]` 对象数组 |
+| 6 | 竞争对比缺 `position_summary` | 定位行显示"待补充" | 模板第 345 行 | 新增 `"position_summary"` |
+| 7 | `chain_positioning` 缺字段 | 产业链文本显示"待补充" | 模板第 305 行 | 新增链定位文本 |
+| 8 | 忘记 `market_cap` 用 string 格式 | 市值显示 [object Object] | 模板用 `String(it.value)` 渲染 | 写为字符串 `"XXX亿"` |
 
 ---
 
-## 已弃用字段
+## 初次写 analysis.json 的检查清单
 
-以下字段在 v2.2 模板中不再渲染：
+写完后逐一确认以下 18 个条目：
 
-- `reports`（机构研报矩阵）
-- `eps_forecast`（EPS 预测与一致性预期）
-- `moat`（护城河）
-- `growth_mechanism`（增长机制，被 growth_drivers 替代）
-- `valuation`（完整估值对象，被 company_identity 中的关键字段替代）
-
-如需保留研报数据，可继续写入 `reports` 字段，但模板不会展示。
-
----
-
-## 反模式
-
-- 不要从泛泛的 SWOT 开始
-- 不要堆数据，只保留改变判断的关键字段
-- 不要在没有来源时称"龙头""领先"
-- 不要省略反证条件和风险
+- [ ] `company_name` — 公司名存在
+- [ ] `fetch_time` — 存在
+- [ ] `one_sentence_view` — 并非"不是A而是B"句式
+- [ ] `company_identity.market_cap` — 字符串格式 `"XXX亿"`，非数字
+- [ ] `company_identity.price/pe_ttm/pb` — 数字
+- [ ] `chain_positioning` — 文本(200-300字)
+- [ ] `chain_flow` — **数组** `[{title,desc,highlight?}]`，非对象
+- [ ] `key_theme_relation.summary` — 字符串，非空
+- [ ] `key_theme_relation.points` — 数组，非空
+- [ ] `growth_drivers` — 数组，每条含 `driver/impact/note`
+- [ ] `business_breakdown` — **对象** `{description, segments:[]}`，非裸数组
+- [ ] `competitive_comparison.position_summary` — 字符串
+- [ ] `profit_logic` — 字符串数组，3-4 条
+- [ ] `evidence_sources` — 对象数组，每条含 `level/content/source`
+- [ ] `real_bottlenecks` — **对象数组** `[{bottleneck, detail}]`，非字符串数组
+- [ ] `key_metrics` — 对象数组，每条含 `metric/target/why`
+- [ ] `research_path` — 字符串
+- [ ] `risks` — 字符串数组，2-5 条
