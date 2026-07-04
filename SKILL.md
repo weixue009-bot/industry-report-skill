@@ -64,7 +64,7 @@ Agent 自动发现环节。
 |------|------|--------|
 | `industry` | 行业名称 | 必填 |
 | `segments` | 环节列表（可选） | 空 = AI 自动发现 |
-| `months` | 时间范围 | 3 个月 |
+| `months` | 时间范围（iwencai 客户端按 `cutoff_date = now - months*30 天` 严格过滤；东财接口在 URL 上传 beginTime 严格过滤） | 3 个月 |
 | `size` | 每环节拉取篇数 | 10 |
 
 ---

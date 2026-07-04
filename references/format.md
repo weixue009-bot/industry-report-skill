@@ -15,6 +15,7 @@
 - 例如：19、13、16
 - 该数值会渲染为环节子页右上角的大数字卡片
 - 必须与 `overview.cost_breakdown` 中对应环节的 `ratio` 一致
+- 模板自动按 `DATA.industry` 匹配 metric-desc 文本：人形机器人/工业机器人/机器人 → "占机器人BOM成本"；创新药 → "占创新药管线总价值"；CXO → "占CXO/CDMO总价值"；半导体/新能源/光伏/锂电池 → 对应表述；未匹配 → `占{行业名}产业总价值` 中性占位
 
 ## 国产化进展 (localization_progress)
 

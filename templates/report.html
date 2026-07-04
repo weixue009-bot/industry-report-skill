@@ -590,10 +590,22 @@ function renderSegment(seg) {
     <div style="font-size:14px;line-height:1.8;white-space:pre-wrap">${escapeHtml(seg.positioning || '待补充')}</div>
   </div>`;
   if (hasRatio) {
+    const ratioDescMap = {
+      '人形机器人': '占人形机器人BOM成本',
+      '工业机器人': '占工业机器人BOM成本',
+      '机器人': '占机器人BOM成本',
+      '创新药': '占创新药管线总价值',
+      '半导体': '占半导体设备总价值',
+      '新能源': '占新能源装备总价值',
+      'CXO': '占CXO/CDMO总价值',
+      '光伏': '占光伏组件总价值',
+      '锂电池': '占锂电池总价值',
+    };
+    const desc = ratioDescMap[industry] || `占${industry}产业总价值`;
     html += `<div class="card metric-card">
       <div class="metric-value">${seg.value_ratio}%</div>
       <div class="metric-label">价值量占比</div>
-      <div class="metric-desc">占人形机器人BOM成本约${seg.value_ratio}%</div>
+      <div class="metric-desc">${desc}约${seg.value_ratio}%</div>
     </div>`;
   }
   if (hasLocalization) {

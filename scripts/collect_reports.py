@@ -404,7 +404,7 @@ def match_segment(report, segments):
 
 def collect_reports(industry, segments, months, size, api_key, base_url, timeout, output_dir, force_iwencai_only=False):
     """主采集逻辑（双数据源版）。
-    
+
     策略：
     - 有 IWENCAI_API_KEY 且有 report-search 可用 → 双源合并
     - 仅 IWENCAI_API_KEY 可用 → 仅用 iwencai
@@ -414,6 +414,11 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
     output_dir = Path(output_dir)
     raw_dir = output_dir / "raw" / "industry" / industry
     raw_dir.mkdir(parents=True, exist_ok=True)
+
+    # 全局时间过滤阈值：iwencai API 不按日期严格过滤，需要在客户端按 date 字段过滤
+    cutoff_date = datetime.now() - timedelta(days=months * 30)
+    cutoff_date_str = cutoff_date.strftime("%Y-%m-%d")
+    print(f"[时间过滤] 仅保留 {cutoff_date_str} 之后的研报（{months} 个月窗口）")
 
     all_reports = {}  # dict {uid_or_key: report}
     sources_used = []
@@ -474,10 +479,17 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
                 items = []
 
             count = 0
+            skipped_old = 0
             for item in items:
                 report = parse_iwencai_report(item)
                 if not report["uid"]:
                     report["uid"] = f"iw_{report['date']}_{report['title'][:40]}"
+
+                # 严格时间过滤：iwencai API 不按日期严格过滤，返回结果可能包含早期研报
+                if report["date"] and cutoff_date_str:
+                    if report["date"] < cutoff_date_str:
+                        skipped_old += 1
+                        continue
 
                 uid = report["uid"]
                 if uid in all_reports:
@@ -487,7 +499,10 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
                 count += 1
                 iwencai_count += 1
 
-            print(f"{count} 篇")
+            if skipped_old:
+                print(f"{count} 篇（已过滤 {skipped_old} 篇早期研报）")
+            else:
+                print(f"{count} 篇")
 
         source_stats["iwencai"] = iwencai_count
         if iwencai_count > 0:
@@ -618,6 +633,11 @@ def collect_company_reports(code, months, size, api_key, base_url, timeout, outp
     raw_dir = output_dir / "raw" / "company" / code
     raw_dir.mkdir(parents=True, exist_ok=True)
 
+    # 全局时间过滤阈值
+    cutoff_date = datetime.now() - timedelta(days=months * 30)
+    cutoff_date_str = cutoff_date.strftime("%Y-%m-%d")
+    print(f"[时间过滤] 仅保留 {cutoff_date_str} 之后的研报（{months} 个月窗口）")
+
     all_reports = {}
     sources_used = []
     source_stats = {}
@@ -658,6 +678,7 @@ def collect_company_reports(code, months, size, api_key, base_url, timeout, outp
         ]
         iwencai_count = 0
         dedup_count = 0
+        skipped_old = 0
         for q in queries:
             try:
                 status, payload = call_iwencai(q, max(size, 20), api_key, base_url, timeout)
@@ -668,6 +689,10 @@ def collect_company_reports(code, months, size, api_key, base_url, timeout, outp
                 for raw in items:
                     rec = parse_iwencai_report(raw) if isinstance(raw, dict) else None
                     if not rec:
+                        continue
+                    # 严格时间过滤：iwencai API 不按日期过滤，需客户端按 date 字段过滤
+                    if rec.get("date") and cutoff_date_str and rec["date"] < cutoff_date_str:
+                        skipped_old += 1
                         continue
                     key = rec.get("uid", "")
                     if not key:
@@ -681,10 +706,14 @@ def collect_company_reports(code, months, size, api_key, base_url, timeout, outp
                 print(f"[iwencai] 搜索 '{q}' 失败: {e}")
                 continue
             time.sleep(1)
+        if skipped_old:
+            print(f"[iwencai] 新增 {iwencai_count} 篇（已过滤 {skipped_old} 篇早期研报）")
+        else:
+            print(f"[iwencai] 新增 {iwencai_count} 篇（去重排除 {dedup_count} 篇）")
+
         if iwencai_count > 0:
             sources_used.append("iwencai")
             source_stats["iwencai"] = iwencai_count
-        print(f"[iwencai] 新增 {iwencai_count} 篇（去重排除 {dedup_count} 篇）")
 
     # --- 输出 ---
     report_list = list(all_reports.values())

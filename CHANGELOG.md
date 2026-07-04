@@ -1,5 +1,11 @@
   # Changelog
 
+  ## [2.0.9] - 2026-07-04
+
+  ### Fixed
+  - **价值量占比 metric-desc 硬编码"占人形机器人BOM成本"**：`templates/report.html` 第 596 行硬编码"占人形机器人BOM成本约"作为通用 metric-desc 文本。导致非机器人行业报告（创新药、CXO、锂电池、光伏等）显示机器人产业链描述，造成严重跨行业数据污染。修复：改为按 `DATA.industry` 动态匹配（人形机器人/工业机器人/创新药/CXO/半导体/新能源/光伏/锂电池等），未匹配的行业用 `占{行业名}产业总价值` 中性占位。验证：创新药报告 ADC/双抗环节现显示"占创新药管线总价值约30%"。
+  - **iwencai API 不按日期严格过滤**：旧版 `--months 3` 实际只控制 API 行为，没有客户端过滤。实测创新药 44 篇中只有 13 篇（30%）是近 3 个月，70% 是早期研报，最早追溯到 2022 年。修复：`collect_reports.py` 在 `collect_reports()` 和 `collect_company_reports()` 顶部计算 `cutoff_date_str`（now - months*30 天），iwencai 循环里按 `report["date"] < cutoff_date_str` 过滤。验证：创新药 44 → 12 篇，全部为近 3 个月内；东财接口本身已按 beginTime 严格过滤，不受影响。
+
   ## [2.0.8] - 2026-07-04
 
   ### Changed
