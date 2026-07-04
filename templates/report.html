@@ -41,10 +41,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .sc-grid-4{grid-template-columns:repeat(4,1fr)}
 .sc-grid-5{grid-template-columns:repeat(5,1fr)}
 .sc-grid-6{grid-template-columns:repeat(6,1fr)}
-.sc-box{color:#fff;padding:12px 14px;border-radius:8px;font-size:13px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.45;box-shadow:0 1px 3px rgba(0,0,0,.12);min-height:64px;word-break:break-word;hyphens:auto;position:relative}
+.sc-box{color:#fff;padding:12px 14px;border-radius:8px;font-size:13px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.45;box-shadow:0 1px 3px rgba(0,0,0,.12);min-height:64px;word-break:break-word;hyphens:auto}
 .sc-box-title{font-size:14px;font-weight:700;margin-bottom:4px;opacity:.95}
 .sc-box-desc{font-size:12px;opacity:.85;font-weight:400;line-height:1.5}
-.sc-box-ratio{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.95);color:#1a1a2e;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;line-height:1.2;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.sc-box-ratio{margin-top:8px;background:rgba(255,255,255,.92);color:#1a1a2e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;line-height:1.2;box-shadow:0 1px 3px rgba(0,0,0,.12);letter-spacing:.5px}
 .sc-arrow{display:flex;justify-content:center;align-items:center;padding:0;margin:0;height:28px}
 .sc-arrow svg{height:28px;max-width:60px}
 
@@ -579,7 +579,7 @@ function renderSupplyChain(sc) {
       const inner = f.desc
         ? `<div class="sc-box-title">${escapeHtml(f.title)}</div><div class="sc-box-desc">${escapeHtml(f.desc)}</div>`
         : `<div class="sc-box-title">${escapeHtml(f.title)}</div>`;
-      return `<div class="sc-box" style="background:${color}">${ratioBadge}${inner}</div>`;
+      return `<div class="sc-box" style="background:${color}">${inner}${ratioBadge}</div>`;
     }).join('');
     return `
       <div class="sc-layer sc-layer-${layerType}">

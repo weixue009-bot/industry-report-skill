@@ -1,5 +1,55 @@
   # Changelog
 
+  ## [2.2.2] - 2026-07-04
+
+  ### Fixed
+  - **format.md / SKILL.md 缺少 segment 全字段清单**：根因修复——之前创新药 segment 缺 5 个字段的本质原因不是某一篇报告的疏忽，而是写作规范文档没有列出模板渲染所需的全 14 个 segment 字段。
+  - `references/format.md`：新增「segment 全字段清单」表格（14 字段 - 模板渲染卡片映射）+ `profit_drivers` 专节 + `tech_roadmap` 专节 + `scoring_dimensions` 专节；清理「产品分层」重复/错位的旧内容。
+  - `SKILL.md`：segment 数据模型示例前新增醒目注释（9 张卡片渲染顺序 + 必填提示）+ 数据模型后新增全字段清单对照表。
+
+  ---
+
+  ## [2.2.1] - 2026-07-04
+
+  ### Fixed
+  - **创新药 segment 缺失 5 个字段，导致子环节页卡片不完整**：4 个 segment 均缺少 `product_tiers`（产品分层表格）、`profit_drivers`（利润驱动表）、`tech_roadmap`（技术路线图）、`scoring_dimensions`（评分维度权重）和 `evidence_sources`（证据来源）等 5 个模板渲染所需字段，导致子环节页面只显示首屏三卡片+竞争格局+壁垒+失败条件，比机器人报告少 5 个核心卡片模块。
+  - 修复：编写 `patch_segment_fields.py` 为 CXO/出海/ADC/创新中药 4 个环节逐项补全 5 个字段（3 层产品分层、4 项利润驱动、3 条技术路线、5 维评分权重、3-5 条证据来源），所有内容基于 150 篇三源研报数据编写。
+  - 报告从 77KB → 93.8KB（+22%），子环节页面格式现在与机器人报告完全对齐。
+
+  ---
+
+  ## [2.2.0] - 2026-07-04
+
+  ### Added
+  - **第三数据源：发现报告 fxbaogao.com**：`collect_reports.py` 新增 `call_fxbaogao_reports()` 函数，调用 `api.fxbaogao.com/mofoun/report/searchReport/searchNoAuth` 搜索研报（免费公开接口，无需 Key）。支持 `--time last3mon` 等相对时间过滤，按行业名+环节关键词多轮搜索后去重合并。`build_report.py` 的 `build_data_source()` 同步新增"发现报告"标签。
+  - 验证：创新药三源采集 **36 → 150 篇**（4x 提升），其中 fxbaogao 贡献 114 篇
+
+  ### Changed
+  - `collect_reports.py` 新增 `import html, re, ssl`；新增 `_fx_strip_html()` / `_fx_clean_snippet()` / `check_fxbaogao_available()` / `_build_fx_ssl_context()` 等 fxbaogao 辅助函数
+  - `collect_reports()` 新增数据源 3 采集块，`collect_company_reports()` 同步接入
+  - `source_stats` 字典新增 `"fxbaogao"` key
+
+  ## [2.1.3] - 2026-07-04
+
+  ### Fixed
+  - **环节研究优先级与核心环节数量不一致**：总览"环节研究优先级"显示4个环节（ADC/双抗、CXO产业链、出海型创新药企、创新中药），但"核心环节"只有3个（缺"出海型创新药企"）。修复：`analysis/industry/创新药/analysis.json` 新增"出海型创新药企"为第4个 segment，含完整的 positioning/value_ratio/localization_progress/international_landscape/domestic_landscape/stocks 字段；`supply_chain.core_segments` 更新为4项（顺序与 segment_priority 一致）；`collect_reports.py` `_SEGMENT_KEYWORDS` 新增"出海型创新药企"扩展关键词（出海/海外/全球/license/bd/fda/百济/信达/传奇等）。
+
+  ## [2.1.2] - 2026-07-04
+
+  ### Fixed
+  - **数据来源显示旧版东财篇数**：`analysis.json` 的 `source_stats` 未随采集脚本更新同步刷新（仍显示 eastmoney=2），导致报告 header 显示"东方财富（2篇）"而非实际的 26 篇。修复：`analysis/industry/创新药/analysis.json` 的 `source_stats` 更新为 `{iwencai: 10, eastmoney: 26}`，`source_report_count` 更新为 36。
+  - **核心环节价值量占比 pill 位置和 UI**：旧版 pill 用绝对定位在 box 右上角，遮挡标题文字。修复：改为文档流排列（title → desc → pill），CSS 从 `position:absolute` 改为 `margin-top:8px`，视觉上在文字下方独立显示；pill 样式改为圆角胶囊（`border-radius:10px` + `letter-spacing:0.5px`），与 box 颜色协调。
+
+  ## [2.1.1] - 2026-07-04
+
+  ### Changed
+  - **东财研报采集从标题关键词过滤改为行业分类字段过滤**：旧版 `call_eastmoney_industry_reports` 用 `industry_keywords`（segment name 列表）对标题做子串匹配，导致东财研报因标题不含指定 segment name 而被大量漏掉（创新药仅2篇）。修复：
+    - 新增 `_INDUSTRY_NAME_KEYWORDS` 字典：每个行业定义宽泛关键词列表（如创新药→医药/生物/创新/CXO/ADC/抗体/PD-1等）
+    - 过滤逻辑改为双重匹配：`industryName` 字段匹配（最可靠）+ 标题关键词匹配（补充），任一命中即保留
+    - 移除 `industry_keywords` 参数，改用 `industry` 参数
+    - 创新药验证：东财 2 → 26 篇（13x 提升）
+  - **segment 分类扩展关键词匹配**：`match_segment()` 新增第二轮模糊匹配，用 `_SEGMENT_KEYWORDS` 字典（每个 segment 定义扩展关键词）匹配 title + summary + content 全文。解决东财研报标题不含 segment name 的分类问题
+
   ## [2.1.0] - 2026-07-04
 
   ### Fixed
@@ -7,6 +57,7 @@
   - **核心环节不显示价值量占比**：`renderLayer()` 只显示 formatItem 拆出的标题/描述，没有从 segments 数组读取 value_ratio。修复：renderLayer 在 `layerType === 'core'` 时按 f.title 查 lookupRatio，找到就在 box 右上角加白色 pill 标签显示百分比；通过模糊匹配兼容 core_segments 名称与 segment.name 不完全一致的情况。验证：创新药核心环节现显示「CXO/CDMO 20%」「ADC/双抗 30%」「创新中药 8%」三个白色 pill。
   - **创新药 core_segments 包含「靶点发现与药物设计」造成环节错位**：「靶点发现与药物设计」属于研发流程不是产品环节，且 segments 数组里没有对应子环节。已在 `analysis/industry/创新药/analysis.json` 中移除该条目，core_segments 现为「CXO/CDMO、ADC/双抗、创新中药」3 个，与子环节 Tab 完全一致。
   - **价值量构成页面文字列宽过窄**：`cost-row` 用 flex+60px 固定 width，导致长文本在窄列里强行换行。修复：改为 `grid-template-columns: 120px 1fr 320px`（三列固定比例：标签 / 进度条 / 说明），`.cost-note` 单独成列（320px 宽 + 左侧分隔线），长文本自然换行。整行有浅灰背景（#f8f9fc）和圆角，可读性显著提升。验证：创新药「临床CRO费用」行说明「包括临床运营、数据管理、生物统计等」已正常换行显示。
+  - **core_segments 名称与 segment.name 不匹配导致价值量占比不显示**：创新药的 core_segments 用「CXO/CRO/CDMO」「ADC/双抗等前沿技术平台」但 segment.name 是「CXO产业链」「ADC/双抗前沿技术」，lookupRatio 模糊匹配失败。修复：`analysis/industry/创新药/analysis.json` 中 core_segments 名称改为与 segment.name 完全一致（`"CXO产业链（研发生产外包）"`）；`references/format.md` 新增「核心环节命名规则」章节；`SKILL.md` 关键约束追加第 7 条。
 
   ## [2.0.9] - 2026-07-04
 

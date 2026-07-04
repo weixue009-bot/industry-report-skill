@@ -56,6 +56,7 @@ def build_data_source(analysis):
     labels = {
         "iwencai": "同花顺i问财",
         "eastmoney": "东方财富",
+        "fxbaogao": "发现报告",
     }
     parts = ["数据来源："]
     source_names = []

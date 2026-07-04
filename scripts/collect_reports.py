@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""投资研究数据采集脚本（双数据源·双模式版）。
+"""投资研究数据采集脚本（三数据源·双模式版）。
 
 支持两种模式：
   --mode industry  行业研报采集（默认）
@@ -8,6 +8,7 @@
 数据源：
 1. iwencai report-search（需 IWENCAI_API_KEY）
 2. 东方财富 reportapi（免费公开接口，无需 Key）
+3. 发现报告 fxbaogao.com（免费公开接口，无需 Key）
 
 输出约定：
   行业模式 → raw/industry/{行业名}/
@@ -15,10 +16,13 @@
 """
 
 import argparse
+import html
 import json
 import os
 import random
+import re
 import secrets
+import ssl
 import sys
 import time
 import urllib.error
@@ -115,23 +119,37 @@ def _em_get(url, params=None, timeout=15):
         _em_last_call[0] = time.time()
 
 
-def call_eastmoney_industry_reports(industry_keywords, months, page_size=50):
-    """调用东财 reportapi 获取行业研报（qType=1）。
+def call_eastmoney_industry_reports(industry, months, page_size=100):
+    """调用东财 reportapi 获取行业研报（qType=1），按东财行业分类字段过滤。
+    
+    旧版用 industry_keywords 对标题做子串匹配，导致很多研报因标题不含指定关键词而被漏掉。
+    东财每条记录自带 industryName 字段（如"医药 — 化学制药"），用它做分类过滤更精准。
     
     Args:
-        industry_keywords: 行业相关关键词列表，用于搜索匹配
-        months: 时间范围（月）
+        industry: 行业名称，用于匹配东财 record 的 industryName 字段
+        months: 时间范围（月），东财 API 在 URL 上严格按 beginTime 过滤
         page_size: 每页条数，最大100
     
     Returns:
-        解析后的研报列表（统一格式）
+        解析后的研报列表（统一格式），最多 page_size * max_pages 条
     """
     end_date = datetime.now()
     start_date = end_date - timedelta(days=months * 30)
     begin = start_date.strftime("%Y-%m-%d")
 
+    # 行业名 → 东财 industryName 匹配关键词（宽泛匹配，宁多勿漏）
+    _INDUSTRY_NAME_KEYWORDS = {
+        "创新药": ["医药", "生物", "创新", "CXO", "CRO", "CDMO", "ADC", "抗体", "PD-1", "肿瘤", "抗癌", "免疫", "靶向"],
+        "机器人": ["机器人", "自动化", "工业母机", "数控", "伺服", "减速器", "传感器"],
+        "半导体": ["半导体", "芯片", "集成电路", "晶圆", "封装", "EDA", "光刻"],
+        "新能源": ["新能源", "光伏", "风电", "储能", "锂电", "电池", "碳中和"],
+        "人工智能": ["人工智能", "AI", "算力", "大模型", "芯片", "GPU", "数据中心"],
+        "汽车": ["汽车", "新能源车", "电动车", "智能驾驶", "自动驾驶", "车联网"],
+    }
+    name_kws = _INDUSTRY_NAME_KEYWORDS.get(industry, [industry])
+
     all_records = []
-    max_pages = 3  # 东财每页最多100条，3页足够覆盖近期研报
+    max_pages = 3
 
     for page in range(1, max_pages + 1):
         params = {
@@ -158,18 +176,18 @@ def call_eastmoney_industry_reports(industry_keywords, months, page_size=50):
             if not rows:
                 break
 
-            # 处理每条记录
+            # 按东财行业分类字段 + 标题关键词双重过滤
             for item in rows:
-                # 标题关键词匹配过滤：只保留与行业关键词相关的研报
                 title = item.get("title", "") or ""
-                title_lower = title.lower()
-                # 如果有关键词且标题不匹配，跳过
-                if industry_keywords and not any(
-                    kw.lower() in title_lower for kw in industry_keywords
-                ):
+                industry_name = item.get("industryName", "") or ""
+                
+                # industryName 匹配（最可靠）
+                name_match = any(kw.lower() in industry_name.lower() for kw in name_kws)
+                # 标题匹配（补充）
+                title_match = any(kw.lower() in title.lower() for kw in name_kws)
+                
+                if not name_match and not title_match:
                     continue
-
-                # 构建统一格式
                 pub_time = item.get("publishDate", "")
                 if isinstance(pub_time, str):
                     pub_time = pub_time[:10]
@@ -361,6 +379,155 @@ def parse_iwencai_report(item):
     }
 
 
+# ============================================================
+# 数据源三：发现报告 fxbaogao.com（免费公开接口）
+# ============================================================
+
+FXBAOGAO_BASE_URL = os.getenv("FXBAOGAO_BASE_URL", "https://api.fxbaogao.com")
+FXBAOGAO_UA = "report-search-skill/1.0 (+https://www.fxbaogao.com)"
+FXBAOGAO_SSL_NO_VERIFY = os.getenv("FXBAOGAO_SSL_NO_VERIFY", "").lower() in {"1", "true", "yes"}
+
+RELATIVE_TIME_VALUES = {
+    "last3day": 3,
+    "last7day": 7,
+    "last1mon": 30,
+    "last3mon": 90,
+    "last1year": 365,
+}
+
+
+def _fx_strip_html(value):
+    """去掉 HTML 标签，返回纯文本。"""
+    if not value:
+        return ""
+    return html.unescape(re.sub(r"<[^>]+>", "", value)).strip()
+
+
+def _fx_clean_snippet(value):
+    cleaned = _fx_strip_html(value)
+    return re.sub(r"^[•·]+\s*", "", cleaned)
+
+
+def check_fxbaogao_available():
+    """检测 fxbaogao.com 是否可访问。"""
+    try:
+        ctx = _build_fx_ssl_context()
+        req = urllib.request.Request(
+            f"{FXBAOGAO_BASE_URL}/mofoun/report/searchReport/searchNoAuth",
+            data=b"{}",
+            headers={"Content-Type": "application/json", "User-Agent": FXBAOGAO_UA},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+def _build_fx_ssl_context():
+    if FXBAOGAO_SSL_NO_VERIFY:
+        return ssl._create_unverified_context()
+    return ssl.create_default_context()
+
+
+def call_fxbaogao_reports(keywords, time_str="last3mon", page_size=20):
+    """调用 fxbaogao.com 搜索研报（无需 Key）。
+    
+    Args:
+        keywords: 搜索关键词
+        time_str: 相对时间（last3day/last7day/last1mon/last3mon/last1year）
+        page_size: 每页条数，最大 100
+    
+    Returns:
+        解析后的研报列表（统一格式）
+    """
+    payload = json.dumps({
+        "keywords": keywords,
+        "authors": [],
+        "orgNames": [],
+        "paragraphSize": 2,
+        "startTime": None,
+        "endTime": time_str,
+        "pageSize": min(page_size, 100),
+        "pageNum": 1,
+    }, ensure_ascii=False).encode("utf-8")
+
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": FXBAOGAO_UA,
+        "Accept": "application/json, text/html;q=0.9,*/*;q=0.8",
+    }
+
+    try:
+        ctx = _build_fx_ssl_context()
+        req = urllib.request.Request(
+            f"{FXBAOGAO_BASE_URL}/mofoun/report/searchReport/searchNoAuth",
+            data=payload,
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
+            raw_data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+    except Exception as exc:
+        print(f"[fxbaogao] 请求失败: {exc}")
+        return []
+
+    if raw_data.get("code") != 0:
+        print(f"[fxbaogao] API 返回错误: {raw_data.get('msg', '')}")
+        return []
+
+    data = raw_data.get("data") or {}
+    items = data.get("dataList") or []
+    records = []
+
+    for item in items:
+        doc_id = item.get("docId", "")
+        title = _fx_strip_html(item.get("title")) or "无标题"
+        org_name = _fx_strip_html(item.get("orgName")) or ""
+        authors = item.get("authors") or []
+        pub_time = item.get("pubTime")
+        pub_time_str = (item.get("pubTimeStr") or "").strip().rstrip("/").replace("/", "-")
+        
+        # 格式化日期
+        if pub_time_str:
+            date = pub_time_str
+        elif isinstance(pub_time, (int, float)) and pub_time > 0:
+            date = datetime.fromtimestamp(pub_time).strftime("%Y-%m-%d")
+        else:
+            date = ""
+
+        # 取分段摘要作为 summary
+        snippets = []
+        for p in (item.get("paragraphObjs") or []):
+            s = _fx_clean_snippet(p.get("content"))
+            if s:
+                snippets.append(s)
+
+        record = {
+            "uid": f"fx_{doc_id}",
+            "title": title,
+            "summary": snippets[0] if snippets else "",
+            "content": " | ".join(snippets) if snippets else "",
+            "institution": org_name,
+            "analyst": ", ".join(authors) if authors else "",
+            "date": date,
+            "url": f"https://www.fxbaogao.com/view?id={doc_id}",
+            "rating": "",
+            "source": "fxbaogao",
+            "info_code": "",
+            "industry_name": _fx_strip_html(item.get("industryName")) or "",
+            "attach_pages": item.get("pageNum", 0),
+        }
+        records.append(record)
+
+    return records
+
+
+# ============================================================
+# 去重 + 分类逻辑
+# ============================================================
+
+
 def dedup_reports(reports):
     """去重：先按 uid 去重，再按 title+date 联合去重。"""
     seen_uids = set()
@@ -387,14 +554,44 @@ def dedup_reports(reports):
 
 
 def match_segment(report, segments):
-    """根据标题关键词匹配产业环节。返回匹配的环节名，无匹配返回 None。"""
+    """根据标题关键词匹配产业环节。返回匹配的环节名，无匹配返回 None。
+    
+    先尝试精确匹配 segment name，再用扩展关键词模糊匹配（用于东财研报）。
+    """
     title_lower = report["title"].lower()
-    summary_lower = report["summary"].lower()
+    summary_lower = report.get("summary", "").lower()
+    content_lower = report.get("content", "").lower()
+    combined = title_lower + " " + summary_lower + " " + content_lower
 
+    # 第一轮：精确匹配 segment name
     for seg in segments:
         seg_lower = seg.lower()
         if seg_lower in title_lower or seg_lower in summary_lower:
             return seg
+
+    # 第二轮：扩展关键词模糊匹配（解决东财研报标题不含 segment name 的问题）
+    _SEGMENT_KEYWORDS = {
+        "化学创新药": ["创新药", "小分子", "靶向", "激酶", "cdk", "egfr", "alk", "kras", "adc"],
+        "生物创新药": ["生物药", "抗体", "pd-1", "pd-l1", "ctla-4", "双抗", "单抗", "biotech", "免疫治疗"],
+        "CXO产业链": ["cxo", "cro", "cdmo", "研发外包", "生产外包", "药明", "康龙", "凯莱英"],
+        "创新中药": ["中药", "经典名方", "中药创新", "天士力", "以岭", "康弘"],
+        "原料药": ["原料药", "api", "中间体", "仿制药原料"],
+        "ADC/双抗前沿技术": ["adc", "抗体偶联", "双抗", "双特异性", "her2", "trop2", "claudin"],
+        "出海型创新药企": ["出海", "海外", "全球", "license", "bd", "fda", "美国", "欧洲", "百济", "信达", "传奇", "商业化"],
+        "丝杠": ["丝杠", "行星滚柱", "滚珠丝杠", "tbi", "直线运动"],
+        "减速器": ["减速器", "谐波", "rv减速", "哈默纳科", "绿的谐波"],
+        "电机": ["电机", "伺服", "空心杯", "无框力矩", "兆威"],
+        "传感器": ["传感器", "力传感", "六维力", "触觉", "安培龙"],
+        "灵巧手": ["灵巧手", "末端执行器", "手指", "抓取"],
+        "具身智能模型": ["具身智能", "vla", "世界模型", "机器人brain"],
+    }
+
+    for seg in segments:
+        keywords = _SEGMENT_KEYWORDS.get(seg, [])
+        for kw in keywords:
+            if kw.lower() in combined:
+                return seg
+
     return None
 
 
@@ -514,11 +711,11 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
         print("--- [数据源: 东方财富 reportapi] ---")
         try:
             em_reports = call_eastmoney_industry_reports(
-                industry_keywords=[industry] + segments,
+                industry=industry,
                 months=months,
-                page_size=50,
+                page_size=100,
             )
-            print(f"[东财] 获取到 {len(em_reports)} 篇行业研报（关键词过滤后）")
+            print(f"[东财] 获取到 {len(em_reports)} 篇行业研报（行业分类过滤 + segment 归类）")
 
             # 按环节归类
             em_count = 0
@@ -556,6 +753,36 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
         except Exception as exc:
             print(f"[东财] 采集异常: {exc}")
 
+        print()
+
+    # ---------- 数据源 3: fxbaogao.com ----------
+    has_fxbaogao = check_fxbaogao_available()
+    if has_fxbaogao:
+        print("--- [数据源: 发现报告 fxbaogao.com] ---")
+        try:
+            # 行业级搜索 + 各环节搜索
+            time_map = {1: "last1mon", 2: "last3mon", 3: "last3mon", 6: "last1year"}
+            time_str = time_map.get(months, "last3mon")
+            fx_queries = [industry] + segments
+            fx_count = 0
+            for q in fx_queries:
+                fx_records = call_fxbaogao_reports(q, time_str=time_str, page_size=20)
+                for rec in fx_records:
+                    rec["matched_segment"] = match_segment(rec, segments) or segments[0] if segments else "未分类"
+                    uid = rec.get("uid", "")
+                    if uid and uid not in all_reports:
+                        all_reports[uid] = rec
+                        fx_count += 1
+            source_stats["fxbaogao"] = fx_count
+            if fx_count > 0:
+                sources_used.append("fxbaogao")
+            print(f"[fxbaogao] 去重后新增 {fx_count} 篇")
+        except Exception as exc:
+            print(f"[fxbaogao] 采集异常: {exc}")
+
+        print()
+    else:
+        print("[fxbaogao] 不可用，跳过")
         print()
 
     # ---------- 归类到环节 ----------
@@ -714,6 +941,25 @@ def collect_company_reports(code, months, size, api_key, base_url, timeout, outp
         if iwencai_count > 0:
             sources_used.append("iwencai")
             source_stats["iwencai"] = iwencai_count
+
+        # --- 数据源 3: fxbaogao 公司搜索 ---
+        if check_fxbaogao_available():
+            try:
+                time_map = {1: "last1mon", 2: "last3mon", 3: "last3mon", 6: "last1year"}
+                time_str = time_map.get(months, "last3mon")
+                fx_records = call_fxbaogao_reports(code, time_str=time_str, page_size=20)
+                fx_count = 0
+                for rec in fx_records:
+                    uid = rec.get("uid", "")
+                    if uid and uid not in all_reports:
+                        all_reports[uid] = rec
+                        fx_count += 1
+                source_stats["fxbaogao"] = fx_count
+                if fx_count > 0:
+                    sources_used.append("fxbaogao")
+                print(f"[fxbaogao] 去重后新增 {fx_count} 篇")
+            except Exception as exc:
+                print(f"[fxbaogao] 公司搜索失败: {exc}")
 
     # --- 输出 ---
     report_list = list(all_reports.values())
