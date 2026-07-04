@@ -6,6 +6,66 @@ AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公
 
 ---
 
+## 安装
+
+### 1. 解压到 WorkBuddy Skills 目录
+
+```bash
+# 将 .zip 解压到以下位置（无该目录则新建）：
+# Linux / macOS
+mkdir -p ~/.workbuddy/skills/
+unzip industry-report-skill.zip -d ~/.workbuddy/skills/
+
+# Windows
+# 解压到 C:\Users\{用户名}\.workbuddy\skills\industry-report\
+```
+
+### 2. 安装依赖的 Python 环境
+
+```bash
+# 确认 Python 版本
+python --version   # 需要 >= 3.9
+```
+
+本技能无外部 Python 依赖（仅使用标准库 `urllib` / `json` 等），无需 `pip install`。
+
+### 3. 安装同花顺官方数据 Skill（二选一，按需）
+
+本技能依赖同花顺官方提供的行业/财务数据 API，需要先安装对应的 Skill：
+
+```bash
+# 安装同花顺 SkillHub CLI（如尚未安装）
+pip install iwencai-skillhub-cli
+
+# 安装财务数据 Skill（公司分析模式需要）
+iwencai-skillhub-cli install hithink-finance-query
+
+# 安装行业数据 Skill（行业分析模式需要）
+iwencai-skillhub-cli install hithink-industry-query
+```
+
+> 如果只需要其中一种模式，可只装对应的 Skill。
+
+### 4. 配置 API Key
+
+```bash
+# Linux / macOS
+export IWENCAI_API_KEY="your_api_key_here"
+echo 'export IWENCAI_API_KEY="your_key"' >> ~/.bashrc
+
+# Windows PowerShell
+$env:IWENCAI_API_KEY="your_api_key_here"
+# 或通过系统环境变量永久配置
+```
+
+API Key 可从 [iwencai.com/skillhub](https://iwencai.com/skillhub) 获取。
+
+### 5. 重启 WorkBuddy
+
+安装完成后重启 WorkBuddy，Skill 会自动加载。在对话中输入"查 XX 行业"或"查 XX 公司"即可使用。
+
+---
+
 ## 两种模式
 
 | 模式 | 触发方式 | 输出 |
@@ -46,30 +106,21 @@ AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公
 
 ---
 
-## 快速开始
+## 手动运行（在 skill 目录下执行）
 
-### 环境要求
-
-- Python 3.8+
-- API Key：`IWENCAI_API_KEY`（如需使用同花顺数据源，可从 iwencai.com/skillhub 获取）
-- 可选：`FXBAOGAO_SSL_NO_VERIFY=1`（如 fxbaogao.com SSL 证书验证失败，限企业内部网络环境）
-
-### 安装
-
-```bash
-git clone https://github.com/weixue009-bot/industry-report-skill.git
-cd industry-report-skill
-pip install requests
-```
+如不想通过 Agent 调用，也可直接运行脚本：
 
 ### 行业分析
 
 ```bash
 # 采集研报数据
+cd ~/.workbuddy/skills/industry-report
 python scripts/collect_reports.py --mode industry \
   --industry "机器人" \
   --segments "丝杠,减速器,电机,传感器,灵巧手,具身智能模型" \
   --months 3 --size 10
+
+# AI 分析（需自行读取研报并生成 analysis/industry/机器人/analysis.json）
 
 # 生成 HTML 报告
 python scripts/build_report.py --mode industry \
@@ -80,12 +131,18 @@ python scripts/build_report.py --mode industry \
 ### 公司分析
 
 ```bash
+cd ~/.workbuddy/skills/industry-report
+
 # 采集研报数据
 python scripts/collect_reports.py --mode company \
   --code "300059" --months 3 --size 20
 
 # 采集财务 / 行情数据
-python scripts/company_collect.py --code "300059"
+python scripts/company_collect.py --code "300059" --output-dir "."
+
+# AI 分析（可先用 company_analysis.py 生成框架）
+python scripts/company_analysis.py --code "300059" --work-dir "."
+# 然后补全 analysis/company/300059/analysis.json 的文本字段
 
 # 生成 HTML 报告
 python scripts/build_report.py --mode company \
@@ -96,48 +153,6 @@ python scripts/build_report.py --mode company \
 > **Windows 用户注意**：运行 Python 脚本时请设置 `PYTHONIOENCODING=utf-8` 环境变量。
 
 ---
-
-## 项目结构
-
-```
-industry-report-skill/
-├── SKILL.md                       # WorkBuddy Skill 定义（行业 + 公司双模式）
-├── _meta.json                     # 技能元数据
-├── CHANGELOG.md                   # 完整版本更新记录
-├── LICENSE                        # MIT
-├── README.md                      # 本文件
-│
-├── scripts/
-│   ├── collect_reports.py         # 行业/公司研报四源采集（iwencai + 东财 + fxbaogao + hithink-industry-query）
-│   ├── company_collect.py         # 公司财务/行情数据采集（hithink-finance-query + 腾讯财经）
-│   └── build_report.py            # HTML 报告生成（双模板路由）
-│
-├── templates/
-│   ├── report.html                # 行业分析 HTML 模板
-│   └── company_report.html        # 公司分析 HTML 模板（竖向卡片式）
-│
-└── references/
-    ├── format.md                  # 行业分析写作规范
-    └── company_format.md          # 公司分析写作规范
-```
-
-### 输出文件隔离
-
-```
-{工作目录}/
-├── raw/industry/{行业名}/      ← 行业原始数据
-├── raw/company/{代码}/          ← 公司原始数据
-├── analysis/industry/{行业名}/  ← 行业分析数据
-├── analysis/company/{代码}/     ← 公司分析数据
-├── output/industry/             ← 行业最终报告
-└── output/company/              ← 公司最终报告
-```
-
----
-
-## 参考与致谢
-
-本项目参考了 [Simon 林](https://github.com/simonlin1212) 的 [a-stock-data](https://github.com/simonlin1212/a-stock-data) 项目，感谢 Simon 林对 A 股数据接口的整理与分享。
 
 ## License
 

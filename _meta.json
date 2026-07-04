@@ -1,6 +1,6 @@
 {
   "name": "industry-report",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "投资研究全场景覆盖：行业研报分析（自动发现产业链环节+四源研报采集+hithink-industry-query行业统计数据+AI分析）+ 公司深度分析（个股研报+ hithink-finance-query财务+腾讯财经行情+AI分析）",
   "author": "为学 & Claw",
   "keywords": ["产业研究", "行业报告", "研报分析", "产业链", "行业分析", "公司分析", "个股研报", "股票分析", "财务分析", "估值分析", "腾讯财经", "发现报告", "同花顺", "hithink-industry-query", "hithink-finance-query"],
