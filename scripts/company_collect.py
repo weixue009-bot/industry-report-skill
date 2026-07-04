@@ -67,7 +67,7 @@ from pathlib import Path
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 IWENCAI_URL = "https://openapi.iwencai.com/v1/query2data"
-IWENCAI_SKILL_ID = "hithink-market-query"
+IWENCAI_SKILL_ID = "hithink-finance-query"  # 同花顺官方财务数据 skill（2026-07-04 安装）
 IWENCAI_SKILL_VERSION = "1.0.0"
 TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q="
 
@@ -230,16 +230,14 @@ def fetch_profile(code):
     d1 = _iwencai_query(q1)
     if d1:
         name = d1.get("股票简称", code_str)
-        industry_list = d1.get("所属同花顺行业", [])
+        industry_list = d1.get("所属同花顺行业", d1.get("所属行业", []))
         industry = " — ".join(industry_list) if isinstance(industry_list, list) else str(industry_list)
         listing_date_raw = d1.get("上市日期", "")
         listing_date = f"{str(listing_date_raw)[:4]}-{str(listing_date_raw)[4:6]}-{str(listing_date_raw)[6:8]}" if len(str(listing_date_raw)) >= 8 else str(listing_date_raw)
         main_biz_list = d1.get("主营产品", [])
         main_business = ", ".join(main_biz_list[:8]) if isinstance(main_biz_list, list) else str(main_biz_list)
-        total_shares = d1.get("总股本[20260703]", None) or _extract_number(d1,
-            [k for k in d1 if "总股本" in k and "流通" not in k])
-        float_shares = d1.get("流通股本[20260703]", None) or _extract_number(d1,
-            [k for k in d1 if "流通股本" in k])
+        total_shares = _extract_number(d1, [k for k in d1 if "总股本" in k and "流通" not in k])
+        float_shares = _extract_number(d1, [k for k in d1 if "流通股本" in k])
 
     # ====== 2. 腾讯财经：实时行情（替代东财 push2） ======
     tq = tencent_quote([code_str])
@@ -325,42 +323,42 @@ def fetch_financial(code):
     """获取最新一期财务指标快照——基于问财查询。"""
     code_str = str(code).zfill(6)
 
-    q = (f"{code_str} 资产负债率 总资产 流动资产 流动负债 每股净资产 "
-         f"基本每股收益 净资产收益率roe 营业收入 归母净利润 扣非净利润 "
-         f"利润总额 毛利率 净利率 营收增长率 净利润增长率")
+    q = (f"{code_str} 营业收入同比增长率 归母净利润同比增长率 归母净利润 营业收入 利润总额 "
+         f"销售毛利率 销售净利率 净资产收益率 资产负债率 每股净资产 基本每股收益")
     d = _iwencai_query(q)
 
     if not d:
         return _empty_financial(code_str)
 
-    # 字段名中有日期后缀如 [20260331]，用 contains 匹配
-    def _find(keyword):
+    # 字段名精确映射：官方 hithink-finance-query 返回的字段名
+    def _match_field(keywords):
         for k in d:
-            if keyword in k:
-                v = d[k]
-                try:
-                    return float(v)
-                except (ValueError, TypeError):
-                    return v
+            for kw in keywords:
+                if kw in k:
+                    v = d[k]
+                    try:
+                        return float(v)
+                    except (ValueError, TypeError):
+                        return v
         return None
 
     return {
         "code": code_str,
         "report_date": "2026Q1",
-        "basic_eps": _find("基本每股收益"),
-        "roe": _find("净资产收益率roe"),
-        "gross_margin": _find("销售毛利率"),
-        "net_margin": _find("销售净利率"),
-        "revenue_yoy": _find("营业收入(同比增长率)"),
-        "profit_yoy": _find("归属母公司股东的净利润(同比增长率)"),
-        "revenue": _find("营业收入[2"),
-        "total_profit": _find("利润总额"),
-        "parent_netprofit": _find("归属于母公司所有者的净利润"),
-        "bvps": _find("每股净资产"),
-        "total_assets": _find("资产总计"),
-        "current_assets": _find("流动资产合计"),
-        "current_liab": _find("流动负债合计"),
-        "debt_ratio": _find("资产负债率"),
+        "basic_eps": _match_field(["基本每股收益"]),
+        "roe": _match_field(["净资产收益率", "roe"]),
+        "gross_margin": _match_field(["销售毛利率", "毛利率"]),
+        "net_margin": _match_field(["销售净利率", "净利率"]),
+        "revenue_yoy": _match_field(["营业收入同比增长率", "营收增长率"]),
+        "profit_yoy": _match_field(["归母净利润同比增长率", "净利润增长率"]),
+        "revenue": _match_field(["营业收入"]),
+        "total_profit": _match_field(["利润总额"]),
+        "parent_netprofit": _match_field(["归母净利润"]),
+        "bvps": _match_field(["每股净资产"]),
+        "total_assets": _match_field(["资产总计", "总资产"]),
+        "current_assets": _match_field(["流动资产合计", "流动资产"]),
+        "current_liab": _match_field(["流动负债合计", "流动负债"]),
+        "debt_ratio": _match_field(["资产负债率"]),
         "historical": [],
     }
 

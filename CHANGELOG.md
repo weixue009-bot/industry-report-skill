@@ -1,5 +1,17 @@
   # Changelog
 
+  ## [2.5.1] - 2026-07-04
+
+  ### Changed
+
+  - **问财财务数据源从自实现 `_iwencai_query` 切换为官方 `hithink-finance-query` skill**：通过 Iwencai SkillHub CLI 安装同花顺官方财务数据技能，`company_collect.py` 的 `IWENCAI_SKILL_ID` 从 `hithink-market-query` 改为 `hithink-finance-query`，查询语句和字段名映射同步适配官方返回格式。
+
+  ### Technical
+
+  - 安装路径：`~/.iwencai-skillhub/skills/hithink-finance-query/`
+  - CLI 路径：`~/.local/bin/iwencai-skillhub-cli`
+  - 与旧方案差异：官方 skill 使用 `X-Claw-Skill-Id: hithink-finance-query` Header，字段名更稳定（如 `归母净利润同比增长率` 而非自解析 `归属母公司股东的净利润(同比增长率)`）
+
   ## [2.5.0] - 2026-07-04
 
   ### Changed
