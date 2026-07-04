@@ -154,6 +154,10 @@ python scripts/build_report.py --mode company \
 
 ---
 
+## 参考与致谢
+
+本项目参考了 [Simon 林](https://github.com/simonlin1212) 的 [a-stock-data](https://github.com/simonlin1212/a-stock-data) 项目，感谢 Simon 林对 A 股数据接口的整理与分享。
+
 ## License
 
 MIT
