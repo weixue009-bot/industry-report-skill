@@ -1,5 +1,26 @@
   # Changelog
 
+  ## [2.6.0] - 2026-07-04
+
+  ### Added
+
+  - **集成 hithink-industry-query（同花顺官方行业数据 skill）到行业分析模式**：
+    - `collect_reports.py` 新增 `call_hithink_industry()` + `fetch_industry_stats()`：采集行业估值/板块行情/环节个股指标等结构化数据
+    - 采集流程新增第 4 数据源管道：研报采集完成后自动调用 hithink-industry-query，输出到 `raw/industry/{行业}/industry_stats.json`
+    - SKILL.md Step 4 新增行业统计数据读取要求：AI 在评分"估值位置""资金动向"维度时，必须引用 `industry_stats.json` 的实际数据
+
+  ### Changed
+
+  - **`collect_reports.py` 数据源架构**：从"研报三源"扩展为"研报三源 + 行业统计数据"四源架构
+  - **`SKILL.md` Step 3 数据源表**：更新为"四个数据源架构"，新增 hithink-industry-query 条目
+  - **`SKILL.md` Step 4.1**：新增"行业统计数据读取"小节，含字段映射表和评分引用示例
+
+  ### Technical
+
+  - `call_hithink_industry()`：使用 `X-Claw-Skill-Id: hithink-industry-query` Header，URL `openapi.iwencai.com/v1/query2data`
+  - `fetch_industry_stats()`：3 个查询（行业估值 / 板块行情 / 按环节个股指标），每环节间隔 0.5s
+  - `industry_stats.json` 结构：`{valuation: [], momentum: [], seg_valuation: {环节名: {...}, ...}}`
+
   ## [2.5.1] - 2026-07-04
 
   ### Changed

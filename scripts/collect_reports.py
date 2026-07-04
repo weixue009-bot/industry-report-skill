@@ -49,6 +49,85 @@ MISSING_KEY_NOTICE = """首次使用 - 获取 API Key
 步骤 3：点击具体的Skill，打开弹窗查看详情，在安装方式-Agent用户-找到您的IWENCAI_API_KEY这一段，复制
 步骤 4：配置环境变量"""
 
+# ============================================================
+# 行业数据源：hithink-industry-query（同花顺官方行业数据 skill）
+# ============================================================
+
+INDUSTRY_SKILL_ID = "hithink-industry-query"
+INDUSTRY_SKILL_VERSION = "1.0.0"
+
+def _get_api_key():
+    return os.environ.get("IWENCAI_API_KEY", "")
+
+
+def call_hithink_industry(query, api_key=None, timeout=15):
+    """调用同花顺官方 hithink-industry-query skill 查询行业结构化数据。
+    
+    支持：行业估值/财务/行情/板块排名等查询。
+    JSON 响应结构：{"datas": [...], "code_count": N, ...}
+    """
+    key = api_key or _get_api_key()
+    if not key:
+        return {"error": "API Key 未设置"}
+    body = json.dumps({
+        "query": query,
+        "page": "1",
+        "limit": "5",
+        "is_cache": "1",
+        "expand_index": "true",
+    }, ensure_ascii=False).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}",
+        "X-Claw-Call-Type": "normal",
+        "X-Claw-Skill-Id": INDUSTRY_SKILL_ID,
+        "X-Claw-Skill-Version": INDUSTRY_SKILL_VERSION,
+        "X-Claw-Plugin-Id": "none",
+        "X-Claw-Plugin-Version": "none",
+        "X-Claw-Trace-Id": secrets.token_hex(32),
+    }
+    url = "https://openapi.iwencai.com/v1/query2data"
+    try:
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def fetch_industry_stats(industry, segments, api_key=None):
+    """采集行业结构化数据（估值/行情/排名等），返回 dict。
+    
+    供 Step 4 AI 分析阶段使用，作为评分和判断的量化依据。
+    """
+    api_key = api_key or _get_api_key()
+    if not api_key:
+        return {"error": "API Key 未设置，无法采集行业统计数据"}
+    
+    results = {}
+    
+    # 1. 行业整体估值
+    q1 = f"{industry} 行业市盈率 行业市净率 行业排名 总市值"
+    r1 = call_hithink_industry(q1, api_key=api_key)
+    results["valuation"] = r1.get("datas", [])
+    
+    # 2. 板块行情
+    q2 = f"{industry} 板块涨跌幅 板块资金流入 主力资金"
+    r2 = call_hithink_industry(q2, api_key=api_key)
+    results["momentum"] = r2.get("datas", [])
+    
+    # 3. 按 segment 逐个查估值
+    results["seg_valuation"] = {}
+    for seg in segments[:3]:  # 最多查 3 个环节
+        q3 = f"{seg} {industry} 市盈率 毛利率 营收增长率"
+        r3 = call_hithink_industry(q3, api_key=api_key)
+        seg_datas = r3.get("datas", [])
+        if seg_datas:
+            results["seg_valuation"][seg] = seg_datas[0]
+        time.sleep(0.5)
+    
+    return results
+
 
 def build_headers(api_key):
     return {
@@ -753,8 +832,6 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
         except Exception as exc:
             print(f"[东财] 采集异常: {exc}")
 
-        print()
-
     # ---------- 数据源 3: fxbaogao.com ----------
     has_fxbaogao = check_fxbaogao_available()
     if has_fxbaogao:
@@ -784,6 +861,25 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
     else:
         print("[fxbaogao] 不可用，跳过")
         print()
+
+    # ---------- 数据源 4: hithink-industry-query（同花顺官方行业统计） ----------
+    print("--- [数据源: 同花顺 hithink-industry-query] ---")
+    industry_stats = fetch_industry_stats(industry, segments)
+    if "error" not in industry_stats:
+        stats_path = raw_dir / "industry_stats.json"
+        with open(stats_path, "w", encoding="utf-8") as f:
+            json.dump(industry_stats, f, ensure_ascii=False, indent=2)
+        print(f"[hithink] 行业统计数据已保存: {stats_path}")
+        if industry_stats.get("valuation"):
+            print(f"[hithink] 行业估值: {len(industry_stats['valuation'])} 条")
+        if industry_stats.get("momentum"):
+            print(f"[hithink] 板块行情: {len(industry_stats['momentum'])} 条")
+        if industry_stats.get("seg_valuation"):
+            for seg, data in industry_stats["seg_valuation"].items():
+                print(f"[hithink] {seg} 环节数据: {len(data) if isinstance(data, list) else 'OK'}")
+    else:
+        print(f"[hithink] 跳过: {industry_stats['error']}")
+    print()
 
     # ---------- 归类到环节 ----------
     categorized = {seg: [] for seg in segments}
