@@ -1,5 +1,18 @@
   # Changelog
 
+  ## [2.3.0] - 2026-07-04
+
+  ### Changed
+  - **公司行情数据源：东财 push2 → 腾讯财经 qt.gtimg.cn**：`company_collect.py` 的 `fetch_profile()` 移除东财 push2 行情快照调用，改为 `tencent_quote()` 函数接入腾讯财经免费实时行情接口。
+    - **动机**：东财 push2 在该环境下经常返回错误的 PE/PB/市值数值（如 PE=6203 而非 81.7），且名称字段只返回代码。腾讯财经接口无需 Key、不封 IP、数据干净无需 /100 缩放。
+    - **新增字段**：`turnover_pct`（换手率）、`amplitude_pct`（振幅）、`vol_ratio`（量比）、`pe_static`（PE 静）、`market_cap_yi`/`float_mcap_yi`（市值·亿元）、`limit_up`/`limit_down`（涨跌停价）、`last_close`（昨收）、`change_amt`（涨跌额）。
+    - **验证**：华微电子 PE=81.7/PB=4.11/换手率 19.37% ✅；濮耐股份 PE=104.65/PB=1.3/换手率 6.04% ✅。
+    - **K线数据源同步切换：东财 push2his → 腾讯财经**：`fetch_kline()` 改为调用 `web.ifzq.gtimg.cn/appstock/app/fqkline/get`（前复权日K线，字段:[date,open,close,high,low,volume]），移除 `_secid()` 函数。验证：华微电子 K线 0→250 日 ✅。
+    - **东财 push2 / push2his 已从 `company_collect.py` 完全移除**，公司模式 100% 腾讯财经+问财双源。
+    - 东财 push2his K线采集保留不变。
+
+  ---
+
   ## [2.2.2] - 2026-07-04
 
   ### Fixed

@@ -549,7 +549,7 @@ python "C:\Users\001\.workbuddy\skills\industry-report\scripts\build_report.py" 
 | 文件 | 功能 |
 |------|------|
 | `scripts/collect_reports.py` | **三数据源·双模式采集**：--mode industry 拉行业研报（iwencai 关键词 + 东财行业字段过滤 + fxbaogao 发现报告搜索）；--mode company 拉个股研报（qType=0 + iwencai + fxbaogao 搜索），三源合并去重 |
-| `scripts/company_collect.py` | **公司数据采集（v2.1）**：问财 iwencai query2data（主力：基本面+财务）+ 东财 push2（辅助：行情+K线），双源互补，已修复 v2.0 名称/行业/财务返回空问题 |
+| `scripts/company_collect.py` | **公司数据采集（v2.3·腾讯财经版）**：问财 iwencai（基本面+财务）+ 腾讯财经 qt.gtimg.cn（行情+日K线，免费不封IP），已彻底移除东财 push2/push2his 依赖 |
 | `scripts/build_report.py` | **双模板路由**：--mode industry 注入行业模板；--mode company 注入公司模板。动态渲染数据来源，Windows 需 `PYTHONIOENCODING=utf-8` |
 | `templates/report.html` | 行业分析 HTML 模板（CSS + JS 渲染） |
 | `templates/company_report.html` | 公司分析 HTML 模板（CSS + JS 渲染） |
