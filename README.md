@@ -34,6 +34,7 @@ AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公
 | 数据源 | 认证 | 行业模式 | 公司模式 |
 |--------|------|---------|---------|
 | **同花顺 iwencai report-search** | 需 `IWENCAI_API_KEY` | 行业研报搜索 + 正文节选 | 个股研报搜索 |
+| **同花顺 hithink-industry-query（官方 skill）** | 需 `IWENCAI_API_KEY` | 行业估值/财务/行情/板块排名查询 | — |
 | **同花顺 hithink-finance-query（官方 skill）** | 需 `IWENCAI_API_KEY` | — | 公司财务/基本面（官方专用财务 skill） |
 | **东方财富 reportapi** | 免费公开 | 行业研报（qType=1） | 个股研报（qType=0，含 EPS） |
 | **发现报告 fxbaogao.com** | 免费公开 | 行业/个股研报搜索，支持相对时间过滤 | 同左 |
