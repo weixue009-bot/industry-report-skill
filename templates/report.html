@@ -41,9 +41,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .sc-grid-4{grid-template-columns:repeat(4,1fr)}
 .sc-grid-5{grid-template-columns:repeat(5,1fr)}
 .sc-grid-6{grid-template-columns:repeat(6,1fr)}
-.sc-box{color:#fff;padding:12px 14px;border-radius:8px;font-size:13px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.45;box-shadow:0 1px 3px rgba(0,0,0,.12);min-height:64px;word-break:break-word;hyphens:auto}
+.sc-box{color:#fff;padding:12px 14px;border-radius:8px;font-size:13px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.45;box-shadow:0 1px 3px rgba(0,0,0,.12);min-height:64px;word-break:break-word;hyphens:auto;position:relative}
 .sc-box-title{font-size:14px;font-weight:700;margin-bottom:4px;opacity:.95}
 .sc-box-desc{font-size:12px;opacity:.85;font-weight:400;line-height:1.5}
+.sc-box-ratio{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.95);color:#1a1a2e;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;line-height:1.2;box-shadow:0 1px 2px rgba(0,0,0,.1)}
 .sc-arrow{display:flex;justify-content:center;align-items:center;padding:0;margin:0;height:28px}
 .sc-arrow svg{height:28px;max-width:60px}
 
@@ -68,12 +69,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .score-value.low{color:#27ae60}
 
 /* Cost Breakdown */
-.cost-bars{display:flex;flex-direction:column;gap:12px}
-.cost-row{display:flex;align-items:center;gap:12px}
-.cost-label{width:120px;font-size:14px;text-align:right;flex-shrink:0;color:#444}
-.cost-track{flex:1;height:28px;background:#e8ecf1;border-radius:6px;overflow:hidden;position:relative}
-.cost-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 12px;font-size:13px;color:#fff;font-weight:600;min-width:40px}
-.cost-ratio{font-size:14px;color:#666;width:60px;text-align:left;flex-shrink:0}
+.cost-bars{display:flex;flex-direction:column;gap:14px}
+.cost-row{display:grid;grid-template-columns:120px 1fr 320px;align-items:center;gap:16px;padding:12px 14px;background:#f8f9fc;border-radius:8px}
+.cost-label{font-size:14px;text-align:right;color:#1a1a2e;font-weight:600}
+.cost-track{height:32px;background:#e8ecf1;border-radius:6px;overflow:hidden;position:relative;min-width:200px}
+.cost-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 14px;font-size:13px;color:#fff;font-weight:600;min-width:48px;box-shadow:inset 0 1px 2px rgba(0,0,0,.1)}
+.cost-note{font-size:13px;color:#555;line-height:1.6;text-align:left;padding-left:12px;border-left:2px solid #d5dae3}
 
 /* Timeline */
 .timeline{position:relative;padding-left:32px}
@@ -410,7 +411,7 @@ function renderOverview() {
         <div class="cost-track">
           <div class="cost-fill" style="width:${c.ratio}%;background:${colors[i%colors.length]}">${c.ratio}%</div>
         </div>
-        <div class="cost-ratio">${escapeHtml(c.note||'')}</div>
+        <div class="cost-note">${escapeHtml(c.note||'')}</div>
       </div>`;
     }
     html += '</div></div>';
@@ -523,8 +524,29 @@ function renderSupplyChain(sc) {
   const core = sc.core_segments || [];
   const upstream = sc.upstream || [];
 
+  // 按 segment.name 从 segments 数组查 value_ratio，用于在核心环节 box 上显示占比
+  const segName2Ratio = {};
+  for (const s of segments) {
+    if (s.name) segName2Ratio[s.name] = s.value_ratio;
+  }
+
   const segNames = segments.map(s => s.name);
   const coreItems = core.length >= segNames.length ? core : segNames;
+
+  // 兼容格式：把 "靶点发现与药物设计" 映射到对应 segment（含在前沿技术中）
+  // 让 coreItems 显示时按匹配到的 segment 名称带上 value_ratio
+  function lookupRatio(itemTitle) {
+    // 直接匹配
+    if (segName2Ratio[itemTitle] !== undefined) return segName2Ratio[itemTitle];
+    // 模糊匹配：item 包含某个 segment.name，或 segment.name 包含 item
+    for (const s of segments) {
+      if (!s.name) continue;
+      if (itemTitle.indexOf(s.name) >= 0 || s.name.indexOf(itemTitle) >= 0) {
+        return s.value_ratio;
+      }
+    }
+    return null;
+  }
 
   // Color palettes - single warm accent
   const demandColors = ['#2c3e50','#34495e','#4a5f7a','#2c3e50','#34495e'];
@@ -546,10 +568,18 @@ function renderSupplyChain(sc) {
     const boxes = items.map((item, i) => {
       const color = colors[i % colors.length];
       const f = formatItem(item);
+      // 仅在核心环节 layer 上显示价值量占比
+      let ratioBadge = '';
+      if (layerType === 'core') {
+        const ratio = lookupRatio(f.title);
+        if (ratio !== null && ratio !== undefined) {
+          ratioBadge = `<div class="sc-box-ratio">${ratio}%</div>`;
+        }
+      }
       const inner = f.desc
         ? `<div class="sc-box-title">${escapeHtml(f.title)}</div><div class="sc-box-desc">${escapeHtml(f.desc)}</div>`
         : `<div class="sc-box-title">${escapeHtml(f.title)}</div>`;
-      return `<div class="sc-box" style="background:${color}">${inner}</div>`;
+      return `<div class="sc-box" style="background:${color}">${ratioBadge}${inner}</div>`;
     }).join('');
     return `
       <div class="sc-layer sc-layer-${layerType}">

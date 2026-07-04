@@ -1,5 +1,13 @@
   # Changelog
 
+  ## [2.1.0] - 2026-07-04
+
+  ### Fixed
+  - **总览核心环节与子环节页数量不一致**：模板的 `renderSupplyChain` 用 `core.length >= segNames.length ? core : segNames` 决定展示项，导致 core_segments 数量可大于子环节数。修复：让用户分析阶段保证 `supply_chain.core_segments` 和 `segments[].name` 一一对齐，并通过模板的 `lookupRatio()` 模糊匹配（item 含 segment.name 或反向包含）保证 value_ratio 始终能挂上。
+  - **核心环节不显示价值量占比**：`renderLayer()` 只显示 formatItem 拆出的标题/描述，没有从 segments 数组读取 value_ratio。修复：renderLayer 在 `layerType === 'core'` 时按 f.title 查 lookupRatio，找到就在 box 右上角加白色 pill 标签显示百分比；通过模糊匹配兼容 core_segments 名称与 segment.name 不完全一致的情况。验证：创新药核心环节现显示「CXO/CDMO 20%」「ADC/双抗 30%」「创新中药 8%」三个白色 pill。
+  - **创新药 core_segments 包含「靶点发现与药物设计」造成环节错位**：「靶点发现与药物设计」属于研发流程不是产品环节，且 segments 数组里没有对应子环节。已在 `analysis/industry/创新药/analysis.json` 中移除该条目，core_segments 现为「CXO/CDMO、ADC/双抗、创新中药」3 个，与子环节 Tab 完全一致。
+  - **价值量构成页面文字列宽过窄**：`cost-row` 用 flex+60px 固定 width，导致长文本在窄列里强行换行。修复：改为 `grid-template-columns: 120px 1fr 320px`（三列固定比例：标签 / 进度条 / 说明），`.cost-note` 单独成列（320px 宽 + 左侧分隔线），长文本自然换行。整行有浅灰背景（#f8f9fc）和圆角，可读性显著提升。验证：创新药「临床CRO费用」行说明「包括临床运营、数据管理、生物统计等」已正常换行显示。
+
   ## [2.0.9] - 2026-07-04
 
   ### Fixed
