@@ -62,6 +62,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+import hashlib  # 用于研报内容去重签名
 
 # ---------- 常量 ----------
 
@@ -418,6 +419,8 @@ def fetch_kline(code, days=250):
 
 def collect_company(code, output_dir):
     code = str(code).zfill(6)
+    # 统一规整路径：解决 Git Bash 下 C: 前缀被误当相对路径导致写入不一致
+    output_dir = os.path.abspath(output_dir)
     raw_dir = Path(output_dir) / "raw" / "company" / code
     raw_dir.mkdir(parents=True, exist_ok=True)
 

@@ -632,6 +632,41 @@ def dedup_reports(reports):
     return result
 
 
+def dedup_fxbaogao_by_content(reports):
+    """对发现报告源做内容相似度二次去重。
+    
+    发现报告中有大量"机构调研纪要"类研报，summary/content 是同一个模板文本。
+    按 content 前 100 字符的哈希值去重，优先保留 institution 不为空且有页数的记录。
+    """
+    seen_content_hashes = {}
+    kept_indices = set()
+
+    for i, r in enumerate(reports):
+        if r.get("source") != "fxbaogao":
+            kept_indices.add(i)
+            continue
+        sig_text = (r.get("content") or r.get("summary") or r.get("title", ""))
+        sig = sig_text[:100].strip()
+        if not sig:
+            kept_indices.add(i)
+            continue
+        sig_hash = hashlib.md5(sig.encode("utf-8")).hexdigest()
+        if sig_hash not in seen_content_hashes:
+            seen_content_hashes[sig_hash] = i
+            kept_indices.add(i)
+        else:
+            existing_idx = seen_content_hashes[sig_hash]
+            existing = reports[existing_idx]
+            current = r
+            existing_score = (1 if existing.get("institution") else 0) + min(existing.get("attach_pages", 0) / 20, 1)
+            current_score = (1 if current.get("institution") else 0) + min(current.get("attach_pages", 0) / 20, 1)
+            if current_score > existing_score:
+                kept_indices.discard(existing_idx)
+                kept_indices.add(i)
+                seen_content_hashes[sig_hash] = i
+    return [reports[i] for i in sorted(kept_indices) if i < len(reports)]
+
+
 def match_segment(report, segments):
     """根据标题关键词匹配产业环节。返回匹配的环节名，无匹配返回 None。
     
@@ -850,6 +885,13 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
                     if uid and uid not in all_reports:
                         all_reports[uid] = rec
                         fx_count += 1
+            # 内容相似度二次去重（过滤同质化模板类研报）
+            before = fx_count
+            all_reports = dedup_fxbaogao_by_content(list(all_reports.values()))
+            all_reports = {r.get("uid", f"fx_dedup_{i}"): r for i, r in enumerate(all_reports)}
+            fx_count = sum(1 for r in all_reports.values() if r.get("source") == "fxbaogao")
+            if before != fx_count:
+                print(f"[fxbaogao] 内容去重: {before} → {fx_count} 篇")
             source_stats["fxbaogao"] = fx_count
             if fx_count > 0:
                 sources_used.append("fxbaogao")
@@ -899,6 +941,17 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
 
     all_list = sorted(all_reports.values(), key=lambda r: r.get("date", "") or "", reverse=True)
 
+    # ---------- 构建降级原因字典 ----------
+    source_errors = {}
+    for seg, err_reason in failed_segments:
+        # 提取数据源名（err_reason 如 "iwencai_401"、"eastmoney_eg"）
+        for src_prefix in ["iwencai", "eastmoney", "fxbaogao"]:
+            if err_reason.startswith(src_prefix):
+                source_errors.setdefault(src_prefix, err_reason)
+                break
+        else:
+            source_errors.setdefault("unknown", err_reason)
+
     # ---------- 输出文件 ----------
     index_data = {
         "industry": industry,
@@ -908,6 +961,7 @@ def collect_reports(industry, segments, months, size, api_key, base_url, timeout
         "total_reports": len(all_reports),
         "sources_used": sources_used,
         "source_stats": source_stats,
+        "source_errors": source_errors,
         "failed_segments": failed_segments,
         "reports": all_list,
     }
@@ -1050,12 +1104,34 @@ def collect_company_reports(code, months, size, api_key, base_url, timeout, outp
                     if uid and uid not in all_reports:
                         all_reports[uid] = rec
                         fx_count += 1
+                # 内容相似度二次去重（过滤同质化模板类研报）
+                report_list_before = list(all_reports.values())
+                deduped = dedup_fxbaogao_by_content(report_list_before)
+                fx_after = sum(1 for r in deduped if r.get("source") == "fxbaogao")
+                if fx_after < fx_count:
+                    print(f"[fxbaogao] 内容去重: {fx_count} → {fx_after} 篇")
+                all_reports = {r.get("uid", f"fx_dedup_{i}"): r for i, r in enumerate(deduped)}
+                fx_count = fx_after
                 source_stats["fxbaogao"] = fx_count
                 if fx_count > 0:
                     sources_used.append("fxbaogao")
                 print(f"[fxbaogao] 去重后新增 {fx_count} 篇")
             except Exception as exc:
                 print(f"[fxbaogao] 公司搜索失败: {exc}")
+
+    # --- 构建降级原因字典 ---
+    source_errors = {}
+    # collect_company_reports 没有 failed_segments 列表，改为从 source_stats 推断
+    for src in ["iwencai", "eastmoney", "fxbaogao"]:
+        if src not in sources_used:
+            if src == "iwencai" and not has_iwencai_key:
+                source_errors[src] = "no_api_key"
+            elif src == "iwencai":
+                source_errors[src] = "401_unauthorized"
+            elif src == "eastmoney" and not has_eastmoney:
+                source_errors[src] = "unavailable"
+            elif src == "fxbaogao":
+                source_errors[src] = "unavailable_or_empty"
 
     # --- 输出 ---
     report_list = list(all_reports.values())
@@ -1070,6 +1146,7 @@ def collect_company_reports(code, months, size, api_key, base_url, timeout, outp
         "total_reports": len(report_list),
         "sources_used": sources_used,
         "source_stats": source_stats,
+        "source_errors": source_errors,
         "reports": report_list,
     }
 

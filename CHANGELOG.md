@@ -1,5 +1,23 @@
   # Changelog
 
+  ## [2.6.1] - 2026-07-04
+
+  ### Fixed
+
+  - **`company_collect.py` Git Bash 路径问题**：通过 Git Bash 运行 `--output-dir "C:\..."` 时，`C:` 前缀被 Python `Path()` 当作相对路径处理，导致 profile/financial/valuation/kline 写入到错误目录。修复：第 421 行新增 `output_dir = os.path.abspath(output_dir)` 统一规整路径。
+  - **发现报告内容同质化严重**：大量"机构调研纪要"类研报的 summary/content 字段为同一模板文本（如"金风科技是一家致力于推动能源变革的企业..."），研报内容有效信息密度低。修复：`collect_reports.py` 新增 `dedup_fxbaogao_by_content()` 函数，按内容前 100 字符的 MD5 签名做二次去重，优先保留有机构名+页数多的记录。行业/公司双模式均已接入。
+
+  ### Added
+
+  - **`collect_reports.py` 新增 `source_errors` 降级日志字段**：行业模式（`index.json`）和公司模式（`reports.json`）的输出中均新增 `source_errors` 字典，记录各数据源不可用的具体原因（如 `"iwencai": "401_unauthorized"`），使 AI 分析阶段可知哪个源降级及原因。
+  - **`scripts/company_analysis.py`（新文件）**：公司分析 JSON 半成品框架生成器。从 `profile.json` + `financial.json` + `reports.json` 自动填充 `company_identity`（10 项）、`financial_snapshot`（12 项）、`sources_used`/`source_stats` 等结构化数据。输出含 24 处 `【待补充】` 占位符的半成品 `analysis.json`，AI 只需逐字段补全文本分析内容，大幅降低手动构造 JSON 的工作量和格式错误风险。
+
+  ### Changed
+
+  - **`SKILL.md` Step B2**：财务采集命令改为 PowerShell 推荐 + Git Bash `/c/` 路径双写法，标注路径注意事项。
+  - **`SKILL.md` Step B3**：新增 `company_analysis.py` 可选步骤说明（使用方式 + 自动/手动填充分工）。
+  - **`SKILL.md` 脚本说明表**：新增 `scripts/company_analysis.py` 条目；`collect_reports.py` 备注 fxbaogao 内容去重 + `source_errors` 字段；`company_collect.py` 备注路径 `os.path.abspath()` 修复。
+
   ## [2.6.0] - 2026-07-04
 
   ### Added

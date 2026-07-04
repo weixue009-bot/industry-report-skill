@@ -280,3 +280,26 @@
 - 模板仅在环节中有任一股票含 eps_forecast 数据时才显示"盈利预测"列
 - 表格显示格式：`1.23→1.56`（第一行） + `+26.8%`（第二行，红涨绿跌）
 - 该数据仅反映券商预测，不构成投资建议，应在备注中注明"预测数据仅供参考"
+
+---
+
+## 大文件写入规范
+
+**问题**：`Write` 工具有文件大小限制（约 30-40KB），直接写入大 JSON 会被静默截断，导致 `analysis.json` 后半部分（通常是最后 segment 的 stocks + evidence_sources + overview 的 core_stock_pool 等）丢失。
+
+**规则**：
+1. **分步编码**：不要一次性将完整 `analysis.json` 用 `Write` 或 `json.dumps()` 写入。应通过 Python 脚本分段构造 → `json.dump()` 输出
+2. **逐 segment 写**：如果行业有 4+ 个完整 segment（每段 18 个字段），先将 overview 写为临时文件，再用 Python 脚本追加 segments
+3. **写入后校验**：每次写入后执行 `json.load()` 验证完整性，确认 `segments` 数量 + 每个 segment 的 `stocks`、`product_tiers`、`profit_drivers` 等数组字段长度正确
+4. **尾部字段**：`core_stock_pool`、`watch_metrics`、`segment_priority`、`production_timeline` 等 overview 尾部字段最易丢失，写入后优先检查
+
+**示例校验命令**
+```python
+import json
+d = json.load(open("analysis/industry/XX/analysis.json", "r", encoding="utf-8"))
+assert len(d["segments"]) == N, f"segments 数量应为{N}"
+for s in d["segments"]:
+    assert len(s.get("stocks", [])) > 0, f"{s['name']} stocks 被截断"
+    assert len(s.get("product_tiers", [])) >= 2, f"{s['name']} product_tiers 被截断"
+print("校验通过")
+```

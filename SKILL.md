@@ -451,12 +451,14 @@ python C:\Users\001\.workbuddy\skills\industry-report\scripts\collect_reports.py
 
 输出到 `raw/company/{代码}/reports.json`。
 
-**财务/行情采集：**
+**财务/行情采集（⚠️ 推荐用 PowerShell 运行，Git Bash 下 C: 前缀可能导致路径问题）：**
 
 ```bash
-python C:\Users\001\.workbuddy\skills\industry-report\scripts\company_collect.py \
-  --code "{代码}" \
-  --output-dir "{工作目录}"
+# PowerShell（推荐）：
+$env:PYTHONIOENCODING="utf-8"; & "C:\Users\001\.workbuddy\binaries\python\envs\default\Scripts\python.exe" "C:\Users\001\.workbuddy\skills\industry-report\scripts\company_collect.py" --code "{代码}" --output-dir "C:\Users\001\Desktop\研报研究"
+
+# Git Bash（路径须用 /c/ 格式）：
+PYTHONIOENCODING=utf-8 /c/Users/001/.workbuddy/binaries/python/envs/default/Scripts/python.exe "C:/Users/001/.workbuddy/skills/industry-report/scripts/company_collect.py" --code "{代码}" --output-dir "/c/Users/001/Desktop/研报研究"
 ```
 
 输出到 `raw/company/{代码}/`：
@@ -467,7 +469,22 @@ python C:\Users\001\.workbuddy\skills\industry-report\scripts\company_collect.py
 
 ### Step B3: AI 分析（Agent 主导执行）
 
-Agent 读取以上全部数据，生成 `analysis/company/{代码}/analysis.json`：
+**可选：先用 company_analysis.py 生成分析框架（自动填充 identity/financial_snapshot）**
+
+```bash
+PYTHONIOENCODING=utf-8 /c/Users/001/.workbuddy/binaries/python/envs/default/Scripts/python.exe \
+  "C:/Users/001/.workbuddy/skills/industry-report/scripts/company_analysis.py" \
+  --code "{代码}" \
+  --work-dir "C:/Users/001/Desktop/研报研究"
+```
+
+输出 `analysis/company/{代码}/analysis.json`（半成品框架），其中：
+- ✅ 自动填充：`company_identity`、`financial_snapshot`、`sources_used`、`source_stats`
+- 🔲 待补全：15 处 `【待补充】` 占位符（one_sentence_view、chain_positioning、growth_drivers 等）
+
+Agent 读取 raw 数据后，逐一替换占位符为实际分析内容。
+
+**完整流程：**Agent 读取以上全部数据，生成 `analysis/company/{代码}/analysis.json`：
 
 ```json
 {
@@ -571,8 +588,9 @@ python "C:\Users\001\.workbuddy\skills\industry-report\scripts\build_report.py" 
 
 | 文件 | 功能 |
 |------|------|
-| `scripts/collect_reports.py` | **三数据源·双模式采集**：--mode industry 拉行业研报（iwencai 关键词 + 东财行业字段过滤 + fxbaogao 发现报告搜索）；--mode company 拉个股研报（qType=0 + iwencai + fxbaogao 搜索），三源合并去重 |
-| `scripts/company_collect.py` | **公司数据采集（v2.5.1·hithink-finance-query 版）**：问财官方 hithink-finance-query skill（基本面+财务）+ 腾讯财经 qt.gtimg.cn（行情+日K线，免费不封IP），已彻底移除东财 push2/push2his 依赖，已替换自实现 _iwencai_query → 同花顺官方 skill |
+| `scripts/collect_reports.py` | **三数据源·双模式采集**：--mode industry 拉行业研报（iwencai 关键词 + 东财行业字段过滤 + fxbaogao 发现报告搜索，fxbaogao 含内容相似度二次去重）；--mode company 拉个股研报（qType=0 + iwencai + fxbaogao 搜索），三源合并去重。输出含 `source_errors` 降级日志字段 |
+| `scripts/company_collect.py` | **公司数据采集（v2.5.1·hithink-finance-query 版）**：问财官方 hithink-finance-query skill（基本面+财务）+ 腾讯财经 qt.gtimg.cn（行情+日K线，免费不封IP），已彻底移除东财 push2/push2his 依赖。路径已加 `os.path.abspath()` 解决 Git Bash C: 前缀问题 |
+| `scripts/company_analysis.py` | **公司分析 JSON 模板生成器（v1.0）**：从 profile.json + financial.json + reports.json 自动生成 analysis.json 半成品，自动填充 company_identity/financial_snapshot/sources，留 15 处 `【待补充】` 占位符供 AI 逐字段补全 |
 | `scripts/build_report.py` | **双模板路由**：--mode industry 注入行业模板；--mode company 注入公司模板。动态渲染数据来源，Windows 需 `PYTHONIOENCODING=utf-8` |
 | `templates/report.html` | 行业分析 HTML 模板（CSS + JS 渲染）——产业链结构卡片 v2.5：上游→核心→需求端自上而下流向，HSL 动态色相均匀分布 |
 | `templates/company_report.html` | 公司分析 HTML 模板（CSS + JS 渲染） |
