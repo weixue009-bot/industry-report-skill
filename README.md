@@ -1,6 +1,6 @@
 # Investment Research Skill 🏭📈
 
-AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公司深度分析**两种模式。自动从同花顺 iwencai + 东方财富 reportapi + 发现报告 fxbaogao 三数据源拉取研报，结合同花顺官方 hithink-finance-query skill + 腾讯财经 qt.gtimg.cn 获取财务数据和实时行情，AI 分析后生成单文件自包含 HTML 报告。
+AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公司深度分析**两种模式。自动从同花顺 iwencai + 东方财富 reportapi + 发现报告 fxbaogao 三数据源拉取研报，结合同花顺官方 hithink-industry-query（行业统计数据）和 hithink-finance-query（公司财务指标）skill + 腾讯财经 qt.gtimg.cn（实时行情），AI 分析后生成单文件自包含 HTML 报告。
 
 用户只需说出行业名称或公司名称，其余全自动。
 
@@ -18,7 +18,7 @@ AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公
 - 自动从研报中发现产业链细分环节
 - 16 个分析模块（总览 + 各环节子页）
 - 板块评分总览 / 核心标的池 / 产业链结构 / 竞争格局 / 证据来源
-- 双源采集去重，支持 iwencai（需 Key）+ 东财（免费）
+- 研报四源采集去重（iwencai + 东财 + fxbaogao）+ hithink-industry-query 行业统计数据
 
 ### 公司分析（Part B）
 
@@ -29,18 +29,20 @@ AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公
 
 ---
 
-## 数据源
+## 数据源架构
 
 | 数据源 | 认证 | 行业模式 | 公司模式 |
 |--------|------|---------|---------|
 | **同花顺 iwencai report-search** | 需 `IWENCAI_API_KEY` | 行业研报搜索 + 正文节选 | 个股研报搜索 |
-| **同花顺 hithink-industry-query（官方 skill）** | 需 `IWENCAI_API_KEY` | 行业估值/财务/行情/板块排名查询 | — |
+| **同花顺 hithink-industry-query（官方 skill）** | 需 `IWENCAI_API_KEY` | 行业估值/财务/行情/板块排名查询（四源之一） | — |
 | **同花顺 hithink-finance-query（官方 skill）** | 需 `IWENCAI_API_KEY` | — | 公司财务/基本面（官方专用财务 skill） |
 | **东方财富 reportapi** | 免费公开 | 行业研报（qType=1） | 个股研报（qType=0，含 EPS） |
 | **发现报告 fxbaogao.com** | 免费公开 | 行业/个股研报搜索，支持相对时间过滤 | 同左 |
 | **腾讯财经 qt.gtimg.cn** | 免费公开，不封IP | — | 实时行情（PE/PB/市值/换手率）+ 日K线（前复权，250 日） |
 
-研报三源（同花顺 + 东方财富 + 发现报告）都可用时同时拉取并合并去重；部分不可用时自动降级。公司模式另加 hithink-finance-query（财务指标）和腾讯财经（行情+K线）两条独立数据管道。
+**行业模式**：研报三源（iwencai + 东财 + fxbaogao）按关键词搜索并自动合并去重 + hithink-industry-query 独立查询行业统计数据（估值/行情/板块排名），四数据源并行。
+**公司模式**：个股研报三源合并 + hithink-finance-query 查询财务指标 + 腾讯财经获取行情+K线，共五数据源并行。
+所有数据源部分不可用时自动降级。
 
 ---
 
@@ -106,8 +108,8 @@ industry-report-skill/
 ├── README.md                      # 本文件
 │
 ├── scripts/
-│   ├── collect_reports.py         # 双数据源研报采集（--mode industry|company）
-│   ├── company_collect.py         # 公司财务/行情数据采集（问财 + 东财双源）
+│   ├── collect_reports.py         # 行业/公司研报四源采集（iwencai + 东财 + fxbaogao + hithink-industry-query）
+│   ├── company_collect.py         # 公司财务/行情数据采集（hithink-finance-query + 腾讯财经）
 │   └── build_report.py            # HTML 报告生成（双模板路由）
 │
 ├── templates/
