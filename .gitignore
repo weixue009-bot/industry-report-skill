@@ -8,3 +8,5 @@ venv/
 dist/
 build/
 tmp/
+# iwencai SkillHub CLI 安装目录（非项目代码，不应被 Git 追踪）
+.iwencai-skillhub/
