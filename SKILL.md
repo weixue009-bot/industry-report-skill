@@ -556,10 +556,9 @@ python "C:\Users\001\.workbuddy\skills\industry-report\scripts\build_report.py" 
 | 文件 | 功能 |
 |------|------|
 | `scripts/collect_reports.py` | **三数据源·双模式采集**：--mode industry 拉行业研报（iwencai 关键词 + 东财行业字段过滤 + fxbaogao 发现报告搜索）；--mode company 拉个股研报（qType=0 + iwencai + fxbaogao 搜索），三源合并去重 |
-| `scripts/company_collect.py` | **公司数据采集（v2.3·腾讯财经版）**：问财 iwencai（基本面+财务）+ 腾讯财经 qt.gtimg.cn（行情+日K线，免费不封IP），已彻底移除东财 push2/push2his 依赖 |
+| `scripts/company_collect.py` | **公司数据采集（v2.5.1·hithink-finance-query 版）**：问财官方 hithink-finance-query skill（基本面+财务）+ 腾讯财经 qt.gtimg.cn（行情+日K线，免费不封IP），已彻底移除东财 push2/push2his 依赖，已替换自实现 _iwencai_query → 同花顺官方 skill |
 | `scripts/build_report.py` | **双模板路由**：--mode industry 注入行业模板；--mode company 注入公司模板。动态渲染数据来源，Windows 需 `PYTHONIOENCODING=utf-8` |
 | `templates/report.html` | 行业分析 HTML 模板（CSS + JS 渲染）——产业链结构卡片 v2.5：上游→核心→需求端自上而下流向，HSL 动态色相均匀分布 |
-
 | `templates/company_report.html` | 公司分析 HTML 模板（CSS + JS 渲染） |
 | `references/format.md` | 行业分析字段写作规范 |
 | `references/company_format.md` | 公司分析字段写作规范 |
