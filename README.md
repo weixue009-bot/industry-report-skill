@@ -1,6 +1,6 @@
 # Investment Research Skill 🏭📈
 
-AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公司深度分析**两种模式。自动从同花顺 iwencai + 东方财富 reportapi + 发现报告 fxbaogao 三数据源拉取研报和财务数据，AI 分析后生成单文件自包含 HTML 报告。
+AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公司深度分析**两种模式。自动从同花顺 iwencai + 东方财富 reportapi + 发现报告 fxbaogao 三数据源拉取研报，结合同花顺官方 hithink-finance-query skill + 腾讯财经 qt.gtimg.cn 获取财务数据和实时行情，AI 分析后生成单文件自包含 HTML 报告。
 
 用户只需说出行业名称或公司名称，其余全自动。
 
@@ -22,8 +22,8 @@ AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公
 
 ### 公司分析（Part B）
 
-- 个股研报（qType=0）+ 财务数据 + 行情估值
-- 问财 iwencai（主力财务）+ 东财 push2（行情辅助）
+- 个股研报（qType=0 + 三源）+ 财务数据 + 行情估值
+- 问财官方 hithink-finance-query skill（基本面+财务）+ 腾讯财经 qt.gtimg.cn（行情+日K线）
 - 单页竖向卡片式布局，信息聚焦
 - 一句话看懂 → 身份卡片 → 产业链定位 → 竞争对比 → 盈利逻辑 → 风险跟踪
 
@@ -34,10 +34,10 @@ AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公
 | 数据源 | 认证 | 行业模式 | 公司模式 |
 |--------|------|---------|---------|
 | **同花顺 iwencai report-search** | 需 `IWENCAI_API_KEY` | 行业研报搜索 + 正文节选 | 个股研报搜索 |
-| **同花顺 iwencai query2data** | 需 `IWENCAI_API_KEY` | — | 公司财务/基本面 |
+| **同花顺 hithink-finance-query（官方 skill）** | 需 `IWENCAI_API_KEY` | — | 公司财务/基本面（官方专用财务 skill） |
 | **东方财富 reportapi** | 免费公开 | 行业研报（qType=1） | 个股研报（qType=0，含 EPS） |
 | **发现报告 fxbaogao.com** | 免费公开 | 行业/个股研报搜索，支持相对时间过滤 | 同左 |
-| **腾讯财经 qt.gtimg.cn** | 免费公开，不封IP | — | 实时行情（PE/PB/市值/换手率）+ 日K线（前复权） |
+| **腾讯财经 qt.gtimg.cn** | 免费公开，不封IP | — | 实时行情（PE/PB/市值/换手率）+ 日K线（前复权，250 日） |
 
 三个数据源都可用时同时拉取并合并去重；部分不可用时自动降级。
 
@@ -48,7 +48,7 @@ AI 驱动投资研究报告生成器 —— 支持**行业产业分析**和**公
 ### 环境要求
 
 - Python 3.8+
-- 可选：`IWENCAI_API_KEY` 环境变量（如需使用同花顺数据源）
+- API Key：`IWENCAI_API_KEY`（如需使用同花顺数据源，可从 iwencai.com/skillhub 获取）
 - 可选：`FXBAOGAO_SSL_NO_VERIFY=1`（如 fxbaogao.com SSL 证书验证失败，限企业内部网络环境）
 
 ### 安装
